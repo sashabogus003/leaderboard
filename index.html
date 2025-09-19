@@ -3,14 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <title>Shuffle Leaderboard</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta http-equiv="Cache-Control" content="no-store"/>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="wrap">
     <div class="hdr">
       <div class="title">🏆 Гонка рефералов 🏆</div>
     </div>
-    <div class="timer" id="timer">Загрузка таймера...</div>
+    <div class="timer" id="timer"></div>
+
     <table class="table">
       <thead>
         <tr>
@@ -22,10 +24,15 @@
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="5">Загрузка...</td></tr>
+        <tr class="skeleton"><td colspan="5">&nbsp;</td></tr>
+        <tr class="skeleton"><td colspan="5">&nbsp;</td></tr>
+        <tr class="skeleton"><td colspan="5">&nbsp;</td></tr>
+        <tr class="skeleton"><td colspan="5">&nbsp;</td></tr>
+        <tr class="skeleton"><td colspan="5">&nbsp;</td></tr>
       </tbody>
     </table>
   </div>
+
   <script src="script.js"></script>
 </body>
 </html>
