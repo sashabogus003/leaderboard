@@ -1,5 +1,5 @@
 const startTime = 1756072800; // 25.08.2025 UTC
-const endTime   = 1769873999; // 30.09.2025 23:59:59 MSK (20:59:59 UTC)
+const endTime   = 1759265999; // 30.09.2025 23:59:59 MSK (20:59:59 UTC)
 const API_BASE = "/api/stats";
 const PRIZES = [2000,1500,750,500,400,300,200,125,125,100,0,0,0,0,0,0,0,0,0,0];
 let REFRESH_MS = 60_000;
