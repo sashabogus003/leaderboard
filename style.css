@@ -1,111 +1,110 @@
-:root{
-  --bg: rgba(0,0,0,0.55);
-  --card: rgba(20,20,24,0.75);
-  --accent: #ffd700;
-}
-
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
+/* Общие стили для всего сайта */
+body {
+  font-family: Arial, sans-serif;
   margin: 0;
-  background: #121212; /* чёрный фон сайта */
-  font-family: Inter, system-ui, Arial, sans-serif;
-  color: #fff;
-  letter-spacing:.2px;
+  padding: 0;
+  background: #0f172a; /* тёмный фон */
+  color: #f1f5f9;      /* светлый текст */
 }
 
-.wrap{
-  width: 600px;
-  margin: 20px auto;
-  padding: 16px;
-  background: var(--bg);
-  border-radius: 16px;
+/* Контейнер */
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
-.hdr{
-  display:flex;align-items:center;justify-content:center;
-  margin-bottom: 8px;
-}
-.title{
-  font-weight:800;
-  font-size:22px;
-  text-align:center;
-  text-shadow:0 0 10px #000;
-  animation: pulse 3s infinite;
-}
-.subtitle{
-  text-align:center;
-  font-weight:700;
-  color: #ffa500;
-  margin-bottom: 6px;
-}
-.last-update{
-  text-align:center;
-  font-size: 12px;
-  margin-bottom: 10px;
-  color: #ccc;
+/* Заголовок */
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 2rem;
 }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+/* Лидерборд */
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.table{
-  width:100%;
-  border-collapse:collapse;
-  overflow:hidden;
-  border-radius:12px;
-  background: var(--card);
-}
-.table thead th{
-  font-size:12px;
-  font-weight:700;
-  text-transform:uppercase;
-  letter-spacing:.6px;
-  background: rgba(255,255,255,0.06);
-  padding:6px 8px;
-}
-.table td{padding:8px 10px;font-size:14px;text-align:center}
-
-tbody tr{transition: transform .25s ease, background .25s ease}
-tbody tr:hover{transform: scale(1.01)}
-
-tbody tr:nth-child(1){
-  background: linear-gradient(90deg, #ffd700 0%, #b8860b 100%);
-  color:#1a1400;
-  font-weight:900;
-  font-size:16px;
-  text-shadow:0 1px 0 rgba(255,255,255,.35);
-}
-tbody tr:nth-child(2){
-  background: linear-gradient(90deg, #d9d9d9 0%, #a9a9a9 100%);
-  color:#121212;
-  font-weight:800;
-}
-tbody tr:nth-child(3){
-  background: linear-gradient(90deg, #cd7f32 0%, #8b4513 100%);
-  color:#120b05;
-  font-weight:800;
+/* Элемент лидерборда */
+.leaderboard-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1e293b;
+  padding: 15px 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transition: transform 0.2s;
 }
 
-.prize{
-  font-weight:1000;
-  font-size:16px;
-  color: var(--accent);
-  text-shadow:none;
+.leaderboard-item:hover {
+  transform: scale(1.02);
 }
 
-.place{font-weight:800}
-.amount{font-variant-numeric: tabular-nums;}
-.name:hover{color: #ffa500; cursor: default;}
+/* Номер, имя и сумма */
+.rank {
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-right: 15px;
+  color: #38bdf8;
+}
 
-.skeleton{
-  position:relative;overflow:hidden;background:rgba(255,255,255,.06);
+.username {
+  flex: 1;
+  font-size: 1rem;
 }
-.skeleton::after{
-  content:"";position:absolute;inset:0;transform:translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
-  animation: shimmer 1.2s infinite;
+
+.amount {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #22c55e;
 }
-@keyframes shimmer{100%{transform:translateX(100%)}}
+
+/* 📱 Адаптив под планшеты */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 1.6rem;
+  }
+
+  .leaderboard-item {
+    padding: 12px 15px;
+  }
+
+  .username {
+    font-size: 0.95rem;
+  }
+
+  .amount {
+    font-size: 1rem;
+  }
+}
+
+/* 📱 Адаптив под телефоны */
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.4rem;
+  }
+
+  .leaderboard-item {
+    flex-direction: column;   /* Столбиком */
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .rank {
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  .username {
+    font-size: 0.9rem;
+  }
+
+  .amount {
+    font-size: 1rem;
+    color: #22c55e;
+  }
+}
