@@ -1,8 +1,10 @@
 const startTime = 1756072800; // 25.08.2025 UTC
-const endTime   = 1769871599; // 30.09.2025 23:59:59 МСК
+const endTime   = 1769873999; // 30.09.2025 23:59:59 MSK (20:59:59 UTC)
+const API_BASE = "/api/stats";
 const PRIZES = [2000,1500,750,500,400,300,200,125,125,100,0,0,0,0,0,0,0,0,0,0];
-let REFRESH_MS = 60_000; // по умолчанию минута
+let REFRESH_MS = 60_000;
 const CACHE_KEY = 'shuffle_leaderboard_cache_v3';
+
 let lastData = null;
 
 const fmtMoney = (n)=> '$' + Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -54,13 +56,13 @@ async function fetchWithTimeout(url, opts={}, timeoutMs=8000){
   const id=setTimeout(()=>ctrl.abort(), timeoutMs);
   try{
     const res=await fetch(url,{...(opts||{}),signal:ctrl.signal});
-    if(!res.ok){throw new Error(res.statusText);}
+    if(!res.ok){let msg=`${res.status} ${res.statusText}`; try{const j=await res.json(); if(j&&j.message)msg=j.message;}catch{} throw new Error(msg);} 
     return await res.json();
   } finally{ clearTimeout(id); }
 }
 
 async function update(){
-  const url=`/api/stats?startTime=${startTime}&endTime=${endTime}`;
+  const url=`${API_BASE}?startTime=${startTime}&endTime=${endTime}`;
   try{
     const data=await fetchWithTimeout(url);
     if(!Array.isArray(data)) throw new Error('INVALID_RESPONSE');
@@ -70,7 +72,6 @@ async function update(){
     saveCache(top);
     lastData = top;
     REFRESH_MS = 60_000;
-    document.getElementById("lastUpdate").textContent = "Последнее обновление: " + new Date().toLocaleTimeString();
   }catch(err){
     console.error('Fetch error:',err);
     const cache=loadCache();
@@ -81,26 +82,33 @@ async function update(){
       const tbody=document.getElementById('tbody');
       tbody.innerHTML='<tr><td colspan="4">Ошибка и нет кэша</td></tr>';
     }
-    REFRESH_MS = 30_000;
+    REFRESH_MS = 30_000; // при ошибке пробуем чаще
   }
+
+  // ✅ всегда обновляем надпись
+  document.getElementById("lastUpdate").textContent =
+    "Последнее обновление: " + new Date().toLocaleTimeString();
+
   setTimeout(update, REFRESH_MS);
 }
 
-// таймер обратного отсчёта
 function updateCountdown(){
   const now=Math.floor(Date.now()/1000);
-  let diff=endTime-now;
-  if(diff<0) diff=0;
-  const d=Math.floor(diff/86400);
-  const h=Math.floor((diff%86400)/3600);
-  const m=Math.floor((diff%3600)/60);
-  const s=diff%60;
-  document.getElementById("countdown").textContent=`До конца гонки: ${d}д ${h}ч ${m}м ${s}с`;
+  const diff=endTime-now;
+  const el=document.getElementById('countdown');
+  if(diff>0){
+    const d=Math.floor(diff/86400);
+    const h=Math.floor((diff%86400)/3600);
+    const m=Math.floor((diff%3600)/60);
+    const s=diff%60;
+    el.textContent=`До конца гонки: ${d}д ${h}ч ${m}м ${s}с`;
+  } else {
+    el.textContent="Гонка завершена!";
+  }
 }
-setInterval(updateCountdown,1000);
-updateCountdown();
 
-// запуск
+setInterval(updateCountdown,1000);
+
 const bootCache=loadCache();
 if(bootCache&&bootCache.data){ lastData = bootCache.data; renderRows(bootCache.data, null); }
 update();
