@@ -109,3 +109,35 @@ tbody tr:nth-child(3){
   animation: shimmer 1.2s infinite;
 }
 @keyframes shimmer{100%{transform:translateX(100%)}}
+
+
+/* ===== 📱 Адаптив ===== */
+@media (max-width: 768px) {
+  .wrap {
+    width: 95%;
+    padding: 12px;
+  }
+  .title { font-size: 18px; }
+  .table thead th { font-size: 11px; padding: 5px; }
+  .table td { font-size: 13px; padding: 6px; }
+}
+
+@media (max-width: 480px) {
+  .wrap {
+    width: 100%;
+    margin: 10px auto;
+    padding: 8px;
+    border-radius: 0;
+  }
+  .title { font-size: 16px; }
+  .subtitle { font-size: 13px; }
+  .last-update { font-size: 11px; }
+
+  .table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .table thead th { font-size: 10px; }
+  .table td { font-size: 12px; padding: 5px; }
+}
