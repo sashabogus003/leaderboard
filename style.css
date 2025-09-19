@@ -1,0 +1,60 @@
+body {
+  margin: 0;
+  font-family: Inter, sans-serif;
+  background: #111;
+  color: #fff;
+}
+.wrap {
+  width: 640px;
+  margin: 20px auto;
+  padding: 16px;
+  background: rgba(0,0,0,0.55);
+  border-radius: 16px;
+}
+.title {
+  font-weight: 800;
+  font-size: 22px;
+  text-align: center;
+  text-shadow: 0 0 10px #000;
+  margin-bottom: 8px;
+}
+.timer {
+  text-align: center;
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffd700;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(20,20,24,0.75);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.table th, .table td {
+  padding: 8px 10px;
+  text-align: center;
+}
+.table thead th {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  background: rgba(255,255,255,0.06);
+}
+.table tbody tr:nth-child(1) {
+  background: linear-gradient(90deg, #ffd700 0%, #b8860b 100%);
+  color: #1a1400;
+  font-weight: 900;
+}
+.table tbody tr:nth-child(2) {
+  background: linear-gradient(90deg, #d9d9d9 0%, #a9a9a9 100%);
+  color: #121212;
+  font-weight: 800;
+}
+.table tbody tr:nth-child(3) {
+  background: linear-gradient(90deg, #cd7f32 0%, #8b4513 100%);
+  color: #120b05;
+  font-weight: 800;
+}
