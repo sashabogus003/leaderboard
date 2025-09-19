@@ -1,18 +1,16 @@
 const startTime = 1756072800; // 25.08.2025 UTC
-const endTime   = Math.floor(new Date("2025-09-30T20:59:59Z").getTime() / 1000); 
-const API_BASE = "/api/stats";
-const PRIZES = [2000,1500,750,500,400,300,200,125,125,100,0,0,0,0,0];
-const REFRESH_MS = 60_000;
+const endTime   = 1769871599; // 30.09.2025 23:59:59 МСК
+const PRIZES = [2000,1500,750,500,400,300,200,125,125,100,0,0,0,0,0,0,0,0,0,0];
+let REFRESH_MS = 60_000; // по умолчанию минута
 const CACHE_KEY = 'shuffle_leaderboard_cache_v3';
-
 let lastData = null;
 
-const fmtMoney = (n)=> '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtMoney = (n)=> '$' + Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
 function loadCache(){ try{const raw=localStorage.getItem(CACHE_KEY);if(!raw)return null;const parsed=JSON.parse(raw);if(!parsed||!Array.isArray(parsed.data))return null;return parsed;}catch(e){return null;} }
 function saveCache(data){ try{localStorage.setItem(CACHE_KEY, JSON.stringify({ts: Date.now(), data}));}catch(e){} }
 
-function sortTop15(list){ return [...list].sort((a,b)=> (b.wagerAmount||0) - (a.wagerAmount||0)).slice(0,15); }
+function sortTop20(list){ return [...list].sort((a,b)=> (b.wagerAmount||0) - (a.wagerAmount||0)).slice(0,20); }
 
 function renderRows(rows, prevMap){
   const tbody=document.getElementById('tbody');
@@ -56,51 +54,53 @@ async function fetchWithTimeout(url, opts={}, timeoutMs=8000){
   const id=setTimeout(()=>ctrl.abort(), timeoutMs);
   try{
     const res=await fetch(url,{...(opts||{}),signal:ctrl.signal});
-    if(!res.ok){let msg=`${res.status} ${res.statusText}`; try{const j=await res.json(); if(j&&j.message)msg=j.message;}catch{} throw new Error(msg);} 
+    if(!res.ok){throw new Error(res.statusText);}
     return await res.json();
   } finally{ clearTimeout(id); }
 }
 
 async function update(){
-  const url=`${API_BASE}?startTime=${startTime}&endTime=${endTime}`;
+  const url=`/api/stats?startTime=${startTime}&endTime=${endTime}`;
   try{
     const data=await fetchWithTimeout(url);
     if(!Array.isArray(data)) throw new Error('INVALID_RESPONSE');
-    const top=sortTop15(data);
+    const top=sortTop20(data);
     const prevMap = lastData ? Object.fromEntries(lastData.map(x=>[x.username, x.wagerAmount])) : null;
     renderRows(top, prevMap);
     saveCache(top);
     lastData = top;
-    document.getElementById('lastUpdate').textContent = "Последнее обновление: " + new Date().toLocaleTimeString("ru-RU");
+    REFRESH_MS = 60_000;
+    document.getElementById("lastUpdate").textContent = "Последнее обновление: " + new Date().toLocaleTimeString();
   }catch(err){
     console.error('Fetch error:',err);
     const cache=loadCache();
     if(cache&&Array.isArray(cache.data)&&cache.data.length){
       renderRows(cache.data, null);
       lastData = cache.data;
-      document.getElementById('lastUpdate').textContent = "⚠ Показаны данные из кэша (" + new Date(cache.ts).toLocaleTimeString("ru-RU") + ")";
     } else {
       const tbody=document.getElementById('tbody');
-      tbody.innerHTML='<tr><td colspan="4">Ошибка загрузки</td></tr>';
-      document.getElementById('lastUpdate').textContent = "Ошибка обновления";
+      tbody.innerHTML='<tr><td colspan="4">Ошибка и нет кэша</td></tr>';
     }
+    REFRESH_MS = 30_000;
   }
+  setTimeout(update, REFRESH_MS);
 }
 
+// таймер обратного отсчёта
 function updateCountdown(){
-  const el=document.getElementById('countdown');
   const now=Math.floor(Date.now()/1000);
-  const diff=endTime-now;
-  if(diff<=0){el.textContent="Гонка завершена";return;}
+  let diff=endTime-now;
+  if(diff<0) diff=0;
   const d=Math.floor(diff/86400);
   const h=Math.floor((diff%86400)/3600);
   const m=Math.floor((diff%3600)/60);
   const s=diff%60;
-  el.textContent=`До конца гонки: ${d}д ${h}ч ${m}м ${s}с`;
+  document.getElementById("countdown").textContent=`До конца гонки: ${d}д ${h}ч ${m}м ${s}с`;
 }
+setInterval(updateCountdown,1000);
+updateCountdown();
 
+// запуск
 const bootCache=loadCache();
 if(bootCache&&bootCache.data){ lastData = bootCache.data; renderRows(bootCache.data, null); }
 update();
-setInterval(update, REFRESH_MS);
-setInterval(updateCountdown,1000);
