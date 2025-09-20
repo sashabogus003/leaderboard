@@ -136,15 +136,16 @@ async function update(){
   const url = `${API_BASE}?startTime=${startTime}&endTime=${endTime}`;
   try{
     const payload = await fetchWithTimeout(url);
-    // ожидаем { data: [...], ts: <ms> } ИЛИ (на всякий) просто массив
-    const data = Array.isArray(payload) ? payload : payload.data;
+
+    // теперь точно найдём массив игроков
+    const raw = Array.isArray(payload) ? payload : payload.data;
+    const data = Array.isArray(raw) ? raw : (raw && raw.players) ? raw.players : [];
     const ts   = Array.isArray(payload) ? null : payload.ts;
 
     if(!Array.isArray(data)) throw new Error('INVALID_RESPONSE');
 
     const top = sortTop20(data);
 
-    // карта предыдущих значений для анимации
     const prevMap = lastTop
       ? new Map(lastTop.map(x => [x.username, x.wagerAmount]))
       : null;
