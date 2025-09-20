@@ -1,16 +1,18 @@
 const API_BASE = "/api/stats";
+const REFRESH_MS = 60_000;
+
 let lastTop = null;          // предыдущие топ-20 для сравнения
-let REFRESH_MS = 60_000;
 let isFirstRender = true;
 let nextUpdateTimer = null;
-let countdown = 60;
+let countdown = REFRESH_MS / 1000;
 
-// ======== таймер гонки ========
+// ===== таймер гонки =====
 function startCountdown(endTimeMs){
   function tick(){
     const now = Date.now();
     const diff = endTimeMs - now;
     const el = document.getElementById('countdown');
+    if(!el) return;
     if(diff <= 0){ el.textContent = "Гонка завершена!"; return; }
     const d = Math.floor(diff/86400000);
     const h = Math.floor((diff%86400000)/3600000);
@@ -22,7 +24,7 @@ function startCountdown(endTimeMs){
   setInterval(tick, 1000);
 }
 
-// ======== утилиты ========
+// ===== утилиты =====
 async function fetchWithTimeout(url, opts={}, timeout=10000){
   const ctrl = new AbortController();
   const id = setTimeout(()=>ctrl.abort(), timeout);
@@ -32,41 +34,59 @@ async function fetchWithTimeout(url, opts={}, timeout=10000){
     return await res.json();
   } finally { clearTimeout(id); }
 }
-
-function sortTop20(list){
-  return [...list].sort((a,b)=> (b.wagerAmount||0) - (a.wagerAmount||0)).slice(0,20);
-}
-
-function fmtMoney(n){
-  return '$' + Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
-}
+function sortTop20(list){ return [...list].sort((a,b)=> (b.wagerAmount||0) - (a.wagerAmount||0)).slice(0,20); }
+function fmtMoney(n){ return '$' + Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }
 
 function saveCache(payload){ try{localStorage.setItem('leaderboardCache', JSON.stringify(payload));}catch{} }
 function loadCache(){ try{const raw = localStorage.getItem('leaderboardCache'); return raw? JSON.parse(raw): null;}catch{return null;} }
 
-// ======== анимация роста значения ========
-function animateValue(el, from, to, durationMs=1500){
+// ===== сохраняем/читаем прошлый TOP для анимации после F5 =====
+function saveLastTop(top){ try{ localStorage.setItem('lastTop', JSON.stringify(top)); }catch{} }
+function loadLastTop(){ try{ const raw = localStorage.getItem('lastTop'); return raw ? JSON.parse(raw) : null; }catch{return null;} }
+
+// ===== статус и обратный отсчёт =====
+function setStatus(type, text){
+  const box = document.getElementById('updateStatus');
+  if(!box) return;
+  box.className = `update-status ${type}`;
+  const next = box.querySelector('.next-update') || (()=>{ const s=document.createElement('div'); s.className='next-update'; box.appendChild(s); return s; })();
+  box.firstChild && (box.firstChild.nodeType === 3) ? (box.firstChild.nodeValue = text) : (box.innerHTML = `${text}<div class="next-update"></div>`);
+}
+function startUpdateCountdown(){
+  const box = document.getElementById('updateStatus');
+  if(!box) return;
+  const span = box.querySelector('.next-update');
+  clearInterval(nextUpdateTimer);
+  countdown = REFRESH_MS/1000;
+  if(span) span.textContent = `Следующее обновление через ${countdown}с`;
+  nextUpdateTimer = setInterval(()=>{
+    countdown--;
+    if(countdown < 0){ clearInterval(nextUpdateTimer); return; }
+    if(span) span.textContent = `Следующее обновление через ${countdown}с`;
+  }, 1000);
+}
+
+// ===== анимация роста значения =====
+function animateValue(el, from, to, durationMs=1800){
   if(from === to){ el.textContent = fmtMoney(to); return; }
-  el.classList.add('flash-up');                   // зелёная подсветка на время анимации
+  el.classList.add('flash-up');
   const start = performance.now();
   const delta = to - from;
-  function ease(t){ return t<.5 ? 2*t*t : -1+(4-2*t)*t; } // easeInOutQuad
+  const ease = t => t<.5 ? 2*t*t : -1+(4-2*t)*t;
   function frame(now){
     const t = Math.min(1, (now - start)/durationMs);
     const v = from + delta * ease(t);
     el.textContent = fmtMoney(v);
     if(t < 1){ requestAnimationFrame(frame); }
-    else{
-      el.textContent = fmtMoney(to);
-      el.classList.remove('flash-up');            // вернуть обычный цвет
-    }
+    else { el.textContent = fmtMoney(to); el.classList.remove('flash-up'); }
   }
   requestAnimationFrame(frame);
 }
 
-// ======== рендер ========
+// ===== рендер =====
 function renderTop3(players, prevMap){
   const box = document.getElementById('top3');
+  if(!box) return;
 
   if(!players || players.length < 3){
     box.innerHTML = `
@@ -94,27 +114,21 @@ function renderTop3(players, prevMap){
     `;
     box.appendChild(card);
 
-    // анимация суммы, если выросла
     const amountEl = card.querySelector('.amount');
-    if(prev!=null && prev !== cur && cur > prev){
-      animateValue(amountEl, prev, cur, 1800);
-    } else {
-      amountEl.textContent = fmtMoney(cur);
-    }
+    if(prev!=null && cur > prev){ animateValue(amountEl, prev, cur, 1800); } else { amountEl.textContent = fmtMoney(cur); }
   });
 
   isFirstRender = false;
 }
-
 function renderRows(players, prevMap){
   const tbody = document.getElementById('tbody');
+  if(!tbody) return;
   tbody.innerHTML = '';
+
   players.forEach((p, idx)=>{
     const tr = document.createElement('tr');
-
     const prev = prevMap && prevMap.has(p.username) ? Number(prevMap.get(p.username)) : null;
     const cur  = Number(p.wagerAmount||0);
-
     tr.innerHTML = `
       <td class="place">${idx+4}</td>
       <td class="name">${p.username ?? '—'}</td>
@@ -123,46 +137,20 @@ function renderRows(players, prevMap){
     `;
     tbody.appendChild(tr);
 
-    // анимация роста
     const amountEl = tr.querySelector('.amount');
-    if(prev!=null && prev !== cur && cur > prev){
-      animateValue(amountEl, prev, cur, 1800);
-    } else {
-      amountEl.textContent = fmtMoney(cur);
-    }
+    if(prev!=null && cur > prev){ animateValue(amountEl, prev, cur, 1800); } else { amountEl.textContent = fmtMoney(cur); }
   });
 }
 
-// ======== отсчёт до следующего обновления ========
-function startUpdateCountdown() {
-  clearInterval(nextUpdateTimer);
-  countdown = 60;
-  const statusEl = document.getElementById("status");
-  if (!statusEl) return;
-
-  nextUpdateTimer = setInterval(() => {
-    countdown--;
-    if (countdown <= 0) {
-      clearInterval(nextUpdateTimer);
-    }
-    const span = statusEl.querySelector(".next-update");
-    if(span){
-      span.textContent = `Следующее обновление через ${countdown}с`;
-    }
-  }, 1000);
-}
-
-// ======== обновление ========
+// ===== обновление =====
 async function update(){
-  const statusEl = document.getElementById('updateStatus');
-  if(statusEl) statusEl.innerHTML = "⏳ Обновление данных... <br><span class='next-update'></span>";
-
+  setStatus('wait', '⏳ Обновление данных...');
   const url = `${API_BASE}?startTime=${startTime}&endTime=${endTime}`;
   try{
     const payload = await fetchWithTimeout(url);
-
-    const data = payload.data || [];
-    const ts   = payload.ts || Date.now();
+    const data = Array.isArray(payload) ? payload : payload.data;
+    const ts   = Array.isArray(payload) ? Date.now() : (payload.ts || Date.now());
+    if(!Array.isArray(data)) throw new Error('INVALID_RESPONSE');
 
     const top = sortTop20(data);
     const prevMap = lastTop ? new Map(lastTop.map(x => [x.username, x.wagerAmount])) : null;
@@ -170,55 +158,42 @@ async function update(){
     renderTop3(top.slice(0,3), prevMap);
     renderRows(top.slice(3), prevMap);
 
-    document.getElementById('lastUpdate').textContent =
-      'Последнее обновление: ' + new Date(ts).toLocaleTimeString();
-
-    if(statusEl){
-      statusEl.innerHTML =
-        `✅ Успешно обновлено в ${new Date(ts).toLocaleTimeString()} <br><span class="next-update"></span>`;
-    }
+    const lu = document.getElementById('lastUpdate');
+    if(lu) lu.textContent = 'Последнее обновление: ' + new Date(ts).toLocaleTimeString();
 
     saveCache({ data, ts });
     lastTop = top;
-    REFRESH_MS = 60_000;
+    saveLastTop(lastTop);
 
+    setStatus('ok', '✅ Успешно обновлено в ' + new Date(ts).toLocaleTimeString());
+    startUpdateCountdown();
   }catch(err){
     console.error('Fetch error:', err);
     const cache = loadCache();
     if(cache && Array.isArray(cache.data)){
       const top = sortTop20(cache.data);
       const prevMap = lastTop ? new Map(lastTop.map(x => [x.username, x.wagerAmount])) : null;
-
       renderTop3(top.slice(0,3), prevMap);
       renderRows(top.slice(3), prevMap);
-
-      if(cache.ts){
-        document.getElementById('lastUpdate').textContent =
-          'Последнее обновление: ' + new Date(cache.ts).toLocaleTimeString();
-      }
+      const lu = document.getElementById('lastUpdate');
+      if(lu && cache.ts) lu.textContent = 'Последнее обновление: ' + new Date(cache.ts).toLocaleTimeString();
       lastTop = top;
     }else{
-      document.getElementById('tbody').innerHTML =
-        '<tr><td colspan="4">Загрузка данных...</td></tr>';
+      document.getElementById('tbody').innerHTML = '<tr><td colspan="4">Загрузка данных...</td></tr>';
       document.getElementById('top3').innerHTML = `
         <div class="top3-card skeleton">Загрузка...</div>
         <div class="top3-card skeleton">Загрузка...</div>
-        <div class="top3-card skeleton">Загрузка...</div>
-      `;
+        <div class="top3-card skeleton">Загрузка...</div>`;
     }
-
-    if(statusEl){
-      statusEl.innerHTML = `❌ Ошибка обновления <br><span class="next-update"></span>`;
-    }
-    REFRESH_MS = 60_000;
+    setStatus('err', '❌ Ошибка обновления, показаны кэш-данные (если были)');
+    startUpdateCountdown();
   }
-
-  startUpdateCountdown();
 }
 
-// ======== старт ========
+// ===== старт =====
 document.addEventListener('DOMContentLoaded', ()=>{
-  startCountdown(raceEnd);   // мс
-  update();
-  setInterval(update, REFRESH_MS);
+  startCountdown(raceEnd);      // таймер гонки
+  lastTop = loadLastTop();      // подхватываем старые данные для анимации после F5
+  update();                     // первый запрос сразу
+  setInterval(update, REFRESH_MS); // автообновление каждую минуту
 });
