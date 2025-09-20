@@ -150,10 +150,16 @@ tbody tr:hover{transform: scale(1.01)}
 .name:hover{color: #ffa500; cursor: default;}
 
 .skeleton{
-  position:relative;overflow:hidden;background:rgba(255,255,255,.06);
+  position:relative;
+  overflow:hidden;
+  background:rgba(255,255,255,.06);
+  text-align:center;
+  padding: 20px;
 }
 .skeleton::after{
-  content:"";position:absolute;inset:0;transform:translateX(-100%);
+  content:"";
+  position:absolute;inset:0;
+  transform:translateX(-100%);
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
   animation: shimmer 1.2s infinite;
 }
