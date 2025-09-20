@@ -68,7 +68,15 @@ async function update(){
     if(!Array.isArray(data)) throw new Error('INVALID_RESPONSE');
     const top=sortTop20(data);
     const prevMap = lastData ? Object.fromEntries(lastData.map(x=>[x.username, x.wagerAmount])) : null;
+
     renderRows(top, prevMap);
+
+    // ✅ обновляем только если данные реально изменились
+    if (!lastData || JSON.stringify(lastData) !== JSON.stringify(top)) {
+      document.getElementById("lastUpdate").textContent =
+        "Последнее обновление: " + new Date().toLocaleTimeString();
+    }
+
     saveCache(top);
     lastData = top;
     REFRESH_MS = 60_000;
@@ -84,10 +92,6 @@ async function update(){
     }
     REFRESH_MS = 10_000; // при ошибке пробуем чаще (каждые 10 сек)
   }
-
-  // ✅ всегда обновляем надпись
-  document.getElementById("lastUpdate").textContent =
-    "Последнее обновление: " + new Date().toLocaleTimeString();
 
   setTimeout(update, REFRESH_MS);
 }
@@ -112,5 +116,10 @@ updateCountdown();
 setInterval(updateCountdown,1000);
 
 const bootCache=loadCache();
-if(bootCache&&bootCache.data){ lastData = bootCache.data; renderRows(bootCache.data, null); }
+if(bootCache&&bootCache.data){ 
+  lastData = bootCache.data; 
+  renderRows(bootCache.data, null); 
+  document.getElementById("lastUpdate").textContent =
+    "Последнее обновление: " + new Date().toLocaleTimeString();
+}
 update();
