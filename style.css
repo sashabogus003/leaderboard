@@ -36,8 +36,14 @@ body{
 .last-update{
   text-align:center;
   font-size: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
   color: #ccc;
+}
+.update-note {
+  text-align: center;
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 10px;
 }
 
 @keyframes pulse {
@@ -172,6 +178,7 @@ tbody tr:hover{transform: scale(1.01)}
   .title { font-size: 16px; }
   .countdown-block { font-size: 16px; }
   .last-update { font-size: 11px; }
+  .update-note { font-size: 10px; }
 
   .table {
     display: block;
