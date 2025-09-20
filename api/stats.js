@@ -7,6 +7,7 @@ let cache = {
 export default async function handler(req, res) {
   const { startTime, endTime } = req.query;
 
+  // --- если кэш ещё живой
   if (cache.data && Date.now() < cache.expiry) {
     return res.status(200).json({ data: cache.data, ts: cache.ts });
   }
@@ -21,17 +22,18 @@ export default async function handler(req, res) {
 
     const json = await response.json();
 
-    // 👇 всегда приводим к виду { data: [...], ts: ... }
+    // 👇 гарантируем одинаковый формат
     const data = Array.isArray(json) ? json : (json.data || []);
-    
+
     cache.data = data;
     cache.ts = Date.now();
-    cache.expiry = Date.now() + 60 * 1000;
+    cache.expiry = Date.now() + 60 * 1000; // кэш 1 минута
 
-    return res.status(200).json({ data: cache.data, ts: cache.ts });
+    return res.status(200).json({ data, ts: cache.ts });
   } catch (err) {
     console.error("Ошибка при запросе Shuffle:", err.message);
 
+    // если есть кэш — отдаём его
     if (cache.data) {
       return res.status(200).json({ data: cache.data, ts: cache.ts });
     }
