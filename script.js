@@ -1,112 +1,151 @@
-const startTime = 1756072800; 
-const endTime   = 1759265999; 
 const API_BASE = "/api/stats";
-const PRIZES = [2000,1500,750,500,400,300,200,125,125,100,0,0,0,0,0,0,0,0,0,0];
-let REFRESH_MS = 60_000;
-const CACHE_KEY = 'shuffle_leaderboard_cache_v5';
-
 let lastData = null;
+let REFRESH_MS = 60_000;
+let isFirstRender = true;
 
-const fmtMoney = (n)=> '$' + Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+// таймер обратного отсчёта
+function startCountdown(endTime) {
+  function updateCountdown() {
+    const now = new Date().getTime();
+    const distance = endTime - now;
 
-function loadCache(){ try{const raw=localStorage.getItem(CACHE_KEY);if(!raw)return null;const parsed=JSON.parse(raw);if(!parsed||!parsed.data)return null;return parsed;}catch(e){return null;} }
-function saveCache(payload){ try{localStorage.setItem(CACHE_KEY, JSON.stringify(payload));}catch(e){} }
+    if (distance < 0) {
+      document.getElementById("countdown").innerHTML = "Гонка завершена!";
+      return;
+    }
 
-function sortTop20(list){ return [...list].sort((a,b)=> (b.wagerAmount||0) - (a.wagerAmount||0)).slice(0,20); }
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-function renderTop3(players){
-  const container = document.getElementById('top3');
-  container.innerHTML = '';
-  players.forEach((p,i)=>{
-    const extraClass = (i === 2) ? 'top3-place' : `top${i+1}`;
-    const card = document.createElement('div');
-    card.className = `top3-card ${extraClass}`;
-    card.innerHTML = `
-      <div class="place">#${i+1}</div>
-      <div class="name">${escapeHtml(p.username ?? '—')}</div>
-      <div class="amount">${fmtMoney(p.wagerAmount)}</div>
-      <div class="prize">${PRIZES[i] ? fmtMoney(PRIZES[i]) : '-'}</div>
-    `;
-    container.appendChild(card);
-  });
+    document.getElementById("countdown").innerHTML =
+      `До конца гонки: ${days}д ${hours}ч ${minutes}м ${seconds}с`;
+  }
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
 }
 
-function renderRows(rows, prevMap){
-  const tbody=document.getElementById('tbody');
-  tbody.innerHTML='';
-  if(!rows||!rows.length){tbody.innerHTML='<tr><td colspan="4">Нет данных</td></tr>';return;}
-  rows.forEach((u,i)=>{
-    const tr=document.createElement('tr');
-    const prev = prevMap && prevMap[u.username] != null ? Number(prevMap[u.username]) : null;
-    const cur  = Number(u.wagerAmount||0);
+// загрузка с таймаутом
+async function fetchWithTimeout(resource, options = {}) {
+  const { timeout = 10000 } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  const response = await fetch(resource, {
+    ...options,
+    signal: controller.signal,
+  });
+  clearTimeout(id);
+  return response.json();
+}
+
+// сортировка топа
+function sortTop20(data) {
+  return data
+    .sort((a, b) => b.wagerAmount - a.wagerAmount)
+    .slice(0, 20);
+}
+
+// рендер топ-3
+function renderTop3(players) {
+  const top3Container = document.getElementById("top3");
+
+  if (!players || players.length < 3) {
+    top3Container.innerHTML = "";
+    return;
+  }
+
+  top3Container.innerHTML = "";
+
+  players.forEach((player, index) => {
+    const card = document.createElement("div");
+    card.classList.add("top3-card");
+
+    if (index === 0) card.classList.add("top1");
+    if (index === 1) card.classList.add("top2");
+    if (index === 2) card.classList.add("top3-place");
+
+    // анимация только при первом рендере
+    if (isFirstRender) {
+      card.classList.add("animate-in");
+    }
+
+    card.innerHTML = `
+      <div class="place">#${index + 1}</div>
+      <div class="name">${player.username}</div>
+      <div class="amount">$${player.wagerAmount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+      <div class="prize">${player.prize ? `$${player.prize.toLocaleString()}` : ""}</div>
+    `;
+
+    top3Container.appendChild(card);
+  });
+
+  isFirstRender = false;
+}
+
+// рендер таблицы
+function renderRows(players, prevMap) {
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = "";
+
+  players.forEach((player, idx) => {
+    const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td class="place">${i+4}</td>
-      <td class="name">${escapeHtml(u.username ?? '—')}</td>
-      <td class="amount">${fmtMoney(prev!=null ? prev : cur)}</td>
-      <td class="prize">${PRIZES[i+3] ? fmtMoney(PRIZES[i+3]) : '-'}</td>
+      <td class="place">${idx + 4}</td>
+      <td class="name">${player.username}</td>
+      <td class="amount">$${player.wagerAmount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+      <td class="prize">${player.prize ? `$${player.prize.toLocaleString()}` : "-"}</td>
     `;
     tbody.appendChild(tr);
-    if(prev!=null && prev!==cur){
-      const cell = tr.querySelector('.amount');
-      animateValue(cell, prev, cur, 3000);
-    }
   });
 }
 
-function escapeHtml(str){return String(str).replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));}
-
-function animateValue(el, from, to, durationMs){
-  const start = performance.now();
-  const delta = to - from;
-  function easeInOutQuad(t){ return t<.5 ? 2*t*t : -1+(4-2*t)*t; }
-  function frame(now){
-    const t = Math.min(1, (now - start)/durationMs);
-    const v = from + delta * easeInOutQuad(t);
-    el.textContent = fmtMoney(v);
-    if(t < 1) requestAnimationFrame(frame); else el.textContent = fmtMoney(to);
-  }
-  requestAnimationFrame(frame);
+// сохранение кэша
+function saveCache(payload) {
+  localStorage.setItem("leaderboardCache", JSON.stringify(payload));
+}
+function loadCache() {
+  const raw = localStorage.getItem("leaderboardCache");
+  return raw ? JSON.parse(raw) : null;
 }
 
-async function fetchWithTimeout(url, opts={}, timeoutMs=8000){
-  const ctrl=new AbortController();
-  const id=setTimeout(()=>ctrl.abort(), timeoutMs);
-  try{
-    const res=await fetch(url,{...(opts||{}),signal:ctrl.signal});
-    if(!res.ok){throw new Error(`${res.status} ${res.statusText}`);} 
-    return await res.json();
-  } finally{ clearTimeout(id); }
-}
+// обновление данных
+async function update() {
+  const url = `${API_BASE}?startTime=${startTime}&endTime=${endTime}`;
+  try {
+    const payload = await fetchWithTimeout(url);
 
-async function update(){
-  const url=`${API_BASE}?startTime=${startTime}&endTime=${endTime}`;
-  try{
-    const payload=await fetchWithTimeout(url);
+    let topRaw = null;
+    let ts = null;
 
-    // ✅ теперь ждём всегда объект {data, ts}
-    if(!payload.data || !Array.isArray(payload.data)) {
-      throw new Error('INVALID_RESPONSE');
+    if (Array.isArray(payload)) {
+      topRaw = payload;
+    } else if (payload.data && Array.isArray(payload.data)) {
+      topRaw = payload.data;
+      ts = payload.ts || null;
     }
 
-    const top=sortTop20(payload.data);
-    const prevMap = lastData ? Object.fromEntries(lastData.map(x=>[x.username, x.wagerAmount])) : null;
+    if (!topRaw) throw new Error("INVALID_RESPONSE");
 
-    renderTop3(top.slice(0,3));
+    const top = sortTop20(topRaw);
+    const prevMap = lastData ? Object.fromEntries(lastData.map(x => [x.username, x.wagerAmount])) : null;
+
+    renderTop3(top.slice(0, 3));
     renderRows(top.slice(3), prevMap);
 
-    if (payload.ts) {
+    if (ts) {
       document.getElementById("lastUpdate").textContent =
-        "Последнее обновление: " + new Date(payload.ts).toLocaleTimeString();
+        "Последнее обновление: " + new Date(ts).toLocaleTimeString();
     }
 
-    saveCache(payload);
+    saveCache({ data: topRaw, ts });
     lastData = top;
     REFRESH_MS = 60_000;
-  }catch(err){
-    console.error('Fetch error:',err);
-    const cache=loadCache();
-    if(cache&&cache.data){
-      renderTop3(cache.data.slice(0,3));
+  } catch (err) {
+    console.error("Fetch error:", err);
+    const cache = loadCache();
+    if (cache && cache.data) {
+      renderTop3(cache.data.slice(0, 3));
       renderRows(cache.data.slice(3), null);
       if (cache.ts) {
         document.getElementById("lastUpdate").textContent =
@@ -114,8 +153,8 @@ async function update(){
       }
       lastData = cache.data;
     } else {
-      const tbody=document.getElementById('tbody');
-      tbody.innerHTML='<tr><td colspan="4">Загрузка данных...</td></tr>';
+      const tbody = document.getElementById("tbody");
+      tbody.innerHTML = '<tr><td colspan="4">Загрузка данных...</td></tr>';
     }
     REFRESH_MS = 10_000;
   }
@@ -123,32 +162,8 @@ async function update(){
   setTimeout(update, REFRESH_MS);
 }
 
-function updateCountdown(){
-  const now=Math.floor(Date.now()/1000);
-  const diff=endTime-now;
-  const el=document.getElementById('countdown');
-  if(diff>0){
-    const d=Math.floor(diff/86400);
-    const h=Math.floor((diff%86400)/3600);
-    const m=Math.floor((diff%3600)/60);
-    const s=diff%60;
-    el.textContent=`До конца гонки: ${d}д ${h}ч ${m}м ${s}с`;
-  } else {
-    el.textContent="Гонка завершена!";
-  }
-}
-
-updateCountdown();
-setInterval(updateCountdown,1000);
-
-const bootCache=loadCache();
-if(bootCache&&bootCache.data){ 
-  lastData = bootCache.data; 
-  renderTop3(bootCache.data.slice(0,3));
-  renderRows(bootCache.data.slice(3), null); 
-  if (bootCache.ts) {
-    document.getElementById("lastUpdate").textContent =
-      "Последнее обновление: " + new Date(bootCache.ts).toLocaleTimeString();
-  }
-}
-update();
+// старт
+document.addEventListener("DOMContentLoaded", () => {
+  startCountdown(raceEnd);
+  update();
+});
