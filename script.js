@@ -154,7 +154,7 @@ function startUpdateCountdown() {
 
 // ======== обновление ========
 async function update(){
-  const statusEl = document.getElementById('status');
+  const statusEl = document.getElementById('updateStatus');
   if(statusEl) statusEl.innerHTML = "⏳ Обновление данных... <br><span class='next-update'></span>";
 
   const url = `${API_BASE}?startTime=${startTime}&endTime=${endTime}`;
