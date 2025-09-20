@@ -38,7 +38,10 @@
     </table>
 
     <!-- Статус автообновления -->
-    <div id="updateStatus" class="update-status"></div>
+    <div id="updateStatus" class="update-status wait" aria-live="polite">
+      ⏳ Обновление ещё не выполнялось
+      <div class="next-update">Следующее обновление через 60с</div>
+    </div>
   </div>
 
   <!-- Константы гонки -->
