@@ -2,6 +2,7 @@
   --bg: rgba(0,0,0,0.55);
   --card: rgba(20,20,24,0.75);
   --accent: #ffd700;
+  --rise: #00e676; /* зелёная подсветка роста */
 }
 
 *{box-sizing:border-box}
@@ -22,178 +23,80 @@ body{
   border-radius: 16px;
 }
 
-.hdr{
-  display:flex;align-items:center;justify-content:center;
-  margin-bottom: 8px;
-}
+.hdr{display:flex;align-items:center;justify-content:center;margin-bottom:8px}
 .title{
-  font-weight:800;
-  font-size:22px;
-  text-align:center;
-  text-shadow:0 0 10px #000;
-  animation: pulse 3s infinite;
+  font-weight:800;font-size:22px;text-align:center;text-shadow:0 0 10px #000;
+  animation:pulse 3s infinite
 }
-.last-update{
-  text-align:center;
-  font-size: 12px;
-  margin-bottom: 4px;
-  color: #ccc;
-}
-.update-note {
-  text-align: center;
-  font-size: 11px;
-  color: #888;
-  margin-bottom: 10px;
-}
+.last-update{ text-align:center;font-size:12px;margin-bottom:4px;color:#ccc }
+.update-note{ text-align:center;font-size:11px;color:#888;margin-bottom:10px }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
 
 /* Крупный таймер */
-.countdown-block {
-  text-align: center;
-  font-size: 22px;
-  font-weight: 800;
-  color: #ffd700;
-  margin: 12px 0;
-  text-shadow: 0 0 6px rgba(0,0,0,0.7);
+.countdown-block{
+  text-align:center;font-size:22px;font-weight:800;color:#ffd700;
+  margin:12px 0;text-shadow:0 0 6px rgba(0,0,0,.7)
 }
 
 /* ТОП-3 карточки */
-.top3 {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin: 16px 0 20px 0;
-  flex-wrap: wrap;
+.top3{display:flex;justify-content:center;gap:12px;margin:16px 0 20px;flex-wrap:wrap}
+.top3-card{
+  flex:1;min-width:90px;padding:12px;border-radius:12px;text-align:center;
+  font-weight:700;box-shadow:0 0 12px rgba(0,0,0,.4)
 }
+.top3-card.animate-in{ animation:slideInTop .7s ease }
+@keyframes slideInTop{ 0%{transform:translateY(-40px);opacity:0}70%{transform:translateY(5px);opacity:1}100%{transform:translateY(0);opacity:1} }
 
-.top3-card {
-  flex: 1;
-  min-width: 90px;
-  padding: 12px;
-  border-radius: 12px;
-  text-align: center;
-  font-weight: 700;
-  box-shadow: 0 0 12px rgba(0,0,0,0.4);
-}
+.top1{ background:linear-gradient(135deg,#ffd700,#b8860b); color:#1a1400 }
+.top2{ background:linear-gradient(135deg,#d9d9d9,#a9a9a9); color:#121212 }
+.top3-place{ background:linear-gradient(135deg,#cd7f32,#8b4513); color:#120b05 }
 
-.top3-card.animate-in {
-  animation: slideInTop 0.7s ease;
-}
-
-@keyframes slideInTop {
-  0% { transform: translateY(-40px); opacity: 0; }
-  70% { transform: translateY(5px); opacity: 1; }
-  100% { transform: translateY(0); opacity: 1; }
-}
-
-.top1 {
-  background: linear-gradient(135deg, #ffd700, #b8860b);
-  color: #1a1400;
-}
-.top2 {
-  background: linear-gradient(135deg, #d9d9d9, #a9a9a9);
-  color: #121212;
-}
-.top3-place {
-  background: linear-gradient(135deg, #cd7f32, #8b4513);
-  color: #120b05;
-}
-
-.top3-card .place {
-  font-size: 18px;
-}
-.top3-card .name {
-  font-size: 16px;
-  margin: 6px 0;
-}
-.top3-card .amount {
-  font-size: 15px;
-}
-.top3-card .prize {
-  font-size: 14px;
-}
+.top3-card .place{font-size:18px}
+.top3-card .name{font-size:16px;margin:6px 0}
+.top3-card .amount{font-size:15px;transition: color .25s ease, text-shadow .25s ease}
+.top3-card .prize{font-size:14px}
 
 /* Таблица */
-.table{
-  width:100%;
-  border-collapse:collapse;
-  overflow:hidden;
-  border-radius:12px;
-  background: var(--card);
-}
+.table{ width:100%; border-collapse:collapse; overflow:hidden; border-radius:12px; background:var(--card) }
 .table thead th{
-  font-size:12px;
-  font-weight:700;
-  text-transform:uppercase;
-  letter-spacing:.6px;
-  background: rgba(255,255,255,0.06);
-  padding:6px 8px;
+  font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
+  background:rgba(255,255,255,.06);padding:6px 8px
 }
 .table td{padding:8px 10px;font-size:14px;text-align:center}
+tbody tr{transition:transform .25s ease, background .25s ease}
+tbody tr:hover{transform:scale(1.01)}
 
-tbody tr{transition: transform .25s ease, background .25s ease}
-tbody tr:hover{transform: scale(1.01)}
-
-.prize{
-  font-weight:1000;
-  font-size:16px;
-  color: var(--accent);
-  text-shadow:none;
-}
-
+.prize{font-weight:1000;font-size:16px;color:var(--accent)}
 .place{font-weight:800}
-.amount{font-variant-numeric: tabular-nums;}
-.name:hover{color: #ffa500; cursor: default;}
+.amount{font-variant-numeric:tabular-nums; transition: color .25s ease, text-shadow .25s ease}
+.amount.flash-up{ color:var(--rise); text-shadow:0 0 10px rgba(0,230,118,.6) }
+.name:hover{color:#ffa500;cursor:default}
 
-.skeleton{
-  position:relative;
-  overflow:hidden;
-  background:rgba(255,255,255,.06);
-  text-align:center;
-  padding: 20px;
-}
+/* Скелетоны */
+.skeleton{position:relative;overflow:hidden;background:rgba(255,255,255,.06);text-align:center;padding:20px}
 .skeleton::after{
-  content:"";
-  position:absolute;inset:0;
-  transform:translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
-  animation: shimmer 1.2s infinite;
+  content:"";position:absolute;inset:0;transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);
+  animation:shimmer 1.2s infinite
 }
 @keyframes shimmer{100%{transform:translateX(100%)}}
 
-/* ===== 📱 Адаптив ===== */
-@media (max-width: 768px) {
-  .wrap {
-    width: 95%;
-    padding: 12px;
-  }
-  .title { font-size: 18px; }
-  .countdown-block { font-size: 18px; }
-  .table thead th { font-size: 11px; padding: 5px; }
-  .table td { font-size: 13px; padding: 6px; }
+/* Адаптив */
+@media (max-width:768px){
+  .wrap{width:95%;padding:12px}
+  .title{font-size:18px}
+  .countdown-block{font-size:18px}
+  .table thead th{font-size:11px;padding:5px}
+  .table td{font-size:13px;padding:6px}
 }
-
-@media (max-width: 480px) {
-  .wrap {
-    width: 100%;
-    margin: 10px auto;
-    padding: 8px;
-    border-radius: 0;
-  }
-  .title { font-size: 16px; }
-  .countdown-block { font-size: 16px; }
-  .last-update { font-size: 11px; }
-  .update-note { font-size: 10px; }
-
-  .table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-  .table thead th { font-size: 10px; }
-  .table td { font-size: 12px; padding: 5px; }
+@media (max-width:480px){
+  .wrap{width:100%;margin:10px auto;padding:8px;border-radius:0}
+  .title{font-size:16px}
+  .countdown-block{font-size:16px}
+  .last-update{font-size:11px}
+  .update-note{font-size:10px}
+  .table{display:block;overflow-x:auto;white-space:nowrap}
+  .table thead th{font-size:10px}
+  .table td{font-size:12px;padding:5px}
 }
