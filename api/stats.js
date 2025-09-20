@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 
 let cache = {
   data: null,
-  ts: null,        // время последнего обновления кэша
+  ts: null,
   expiry: 0
 };
 
@@ -30,8 +30,8 @@ export default async function handler(req, res) {
 
     // сохраняем в кэш
     cache.data = json;
-    cache.ts = Date.now();               // метка времени обновления
-    cache.expiry = Date.now() + 60 * 1000; // живёт 1 минуту
+    cache.ts = Date.now();
+    cache.expiry = Date.now() + 60 * 1000; // кэш на 1 минуту
 
     return res.status(200).json({ data: cache.data, ts: cache.ts });
   } catch (err) {
