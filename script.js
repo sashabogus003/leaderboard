@@ -3,7 +3,7 @@ const endTime   = 1759265999;
 const API_BASE = "/api/stats";
 const PRIZES = [2000,1500,750,500,400,300,200,125,125,100,0,0,0,0,0,0,0,0,0,0];
 let REFRESH_MS = 60_000;
-const CACHE_KEY = 'shuffle_leaderboard_cache_v4';
+const CACHE_KEY = 'shuffle_leaderboard_cache_v5';
 
 let lastData = null;
 
@@ -82,7 +82,11 @@ async function update(){
   const url=`${API_BASE}?startTime=${startTime}&endTime=${endTime}`;
   try{
     const payload=await fetchWithTimeout(url);
-    if(!payload || !Array.isArray(payload.data)) throw new Error('INVALID_RESPONSE');
+
+    // ✅ теперь ждём всегда объект {data, ts}
+    if(!payload.data || !Array.isArray(payload.data)) {
+      throw new Error('INVALID_RESPONSE');
+    }
 
     const top=sortTop20(payload.data);
     const prevMap = lastData ? Object.fromEntries(lastData.map(x=>[x.username, x.wagerAmount])) : null;
@@ -90,7 +94,6 @@ async function update(){
     renderTop3(top.slice(0,3));
     renderRows(top.slice(3), prevMap);
 
-    // ✅ теперь время берём с сервера
     if (payload.ts) {
       document.getElementById("lastUpdate").textContent =
         "Последнее обновление: " + new Date(payload.ts).toLocaleTimeString();
