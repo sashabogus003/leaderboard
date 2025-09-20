@@ -51,7 +51,11 @@ function renderTop3(players) {
   const top3Container = document.getElementById("top3");
 
   if (!players || players.length < 3) {
-    top3Container.innerHTML = "";
+    top3Container.innerHTML = `
+      <div class="top3-card skeleton">Загрузка...</div>
+      <div class="top3-card skeleton">Загрузка...</div>
+      <div class="top3-card skeleton">Загрузка...</div>
+    `;
     return;
   }
 
@@ -65,7 +69,6 @@ function renderTop3(players) {
     if (index === 1) card.classList.add("top2");
     if (index === 2) card.classList.add("top3-place");
 
-    // анимация только при первом рендере
     if (isFirstRender) {
       card.classList.add("animate-in");
     }
@@ -84,7 +87,7 @@ function renderTop3(players) {
 }
 
 // рендер таблицы
-function renderRows(players, prevMap) {
+function renderRows(players) {
   const tbody = document.getElementById("tbody");
   tbody.innerHTML = "";
 
@@ -100,7 +103,7 @@ function renderRows(players, prevMap) {
   });
 }
 
-// сохранение кэша
+// кэш
 function saveCache(payload) {
   localStorage.setItem("leaderboardCache", JSON.stringify(payload));
 }
@@ -128,10 +131,9 @@ async function update() {
     if (!topRaw) throw new Error("INVALID_RESPONSE");
 
     const top = sortTop20(topRaw);
-    const prevMap = lastData ? Object.fromEntries(lastData.map(x => [x.username, x.wagerAmount])) : null;
 
     renderTop3(top.slice(0, 3));
-    renderRows(top.slice(3), prevMap);
+    renderRows(top.slice(3));
 
     if (ts) {
       document.getElementById("lastUpdate").textContent =
@@ -146,7 +148,7 @@ async function update() {
     const cache = loadCache();
     if (cache && cache.data) {
       renderTop3(cache.data.slice(0, 3));
-      renderRows(cache.data.slice(3), null);
+      renderRows(cache.data.slice(3));
       if (cache.ts) {
         document.getElementById("lastUpdate").textContent =
           "Последнее обновление: " + new Date(cache.ts).toLocaleTimeString();
