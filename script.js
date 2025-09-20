@@ -1,21 +1,14 @@
 const API_BASE = "/api/stats";
-const START_TS = 1756072800;   // начало гонки (сек)
-const END_TS   = 1759265999;   // конец гонки (сек)
-const RACE_END_MS = END_TS * 1000;
-
-const PRIZES = [2000,1500,750,500,400,300,200,125,125,100,0,0,0,0,0,0,0,0,0,0];
-
-let lastTop = null;
+let lastTop = null;          // предыдущие топ-20 для сравнения
 let REFRESH_MS = 60_000;
 let isFirstRender = true;
 
-// ===== таймер =====
+// ======== таймер ========
 function startCountdown(endTimeMs){
   function tick(){
     const now = Date.now();
     const diff = endTimeMs - now;
     const el = document.getElementById('countdown');
-    if(!el) return;
     if(diff <= 0){ el.textContent = "Гонка завершена!"; return; }
     const d = Math.floor(diff/86400000);
     const h = Math.floor((diff%86400000)/3600000);
@@ -27,7 +20,7 @@ function startCountdown(endTimeMs){
   setInterval(tick, 1000);
 }
 
-// ===== утилиты =====
+// ======== утилиты ========
 async function fetchWithTimeout(url, opts={}, timeout=10000){
   const ctrl = new AbortController();
   const id = setTimeout(()=>ctrl.abort(), timeout);
@@ -49,13 +42,13 @@ function fmtMoney(n){
 function saveCache(payload){ try{localStorage.setItem('leaderboardCache', JSON.stringify(payload));}catch{} }
 function loadCache(){ try{const raw = localStorage.getItem('leaderboardCache'); return raw? JSON.parse(raw): null;}catch{return null;} }
 
-// ===== анимация =====
+// ======== анимация роста значения ========
 function animateValue(el, from, to, durationMs=1500){
   if(from === to){ el.textContent = fmtMoney(to); return; }
-  el.classList.add('flash-up');
+  el.classList.add('flash-up');                   // зелёная подсветка на время анимации
   const start = performance.now();
   const delta = to - from;
-  function ease(t){ return t<.5 ? 2*t*t : -1+(4-2*t)*t; }
+  function ease(t){ return t<.5 ? 2*t*t : -1+(4-2*t)*t; } // easeInOutQuad
   function frame(now){
     const t = Math.min(1, (now - start)/durationMs);
     const v = from + delta * ease(t);
@@ -63,16 +56,15 @@ function animateValue(el, from, to, durationMs=1500){
     if(t < 1){ requestAnimationFrame(frame); }
     else{
       el.textContent = fmtMoney(to);
-      el.classList.remove('flash-up');
+      el.classList.remove('flash-up');            // вернуть обычный цвет
     }
   }
   requestAnimationFrame(frame);
 }
 
-// ===== рендер =====
+// ======== рендер ========
 function renderTop3(players, prevMap){
   const box = document.getElementById('top3');
-  if(!box) return;
 
   if(!players || players.length < 3){
     box.innerHTML = `
@@ -100,6 +92,7 @@ function renderTop3(players, prevMap){
     `;
     box.appendChild(card);
 
+    // анимация суммы, если выросла
     const amountEl = card.querySelector('.amount');
     if(prev!=null && prev !== cur && cur > prev){
       animateValue(amountEl, prev, cur, 1800);
@@ -113,14 +106,7 @@ function renderTop3(players, prevMap){
 
 function renderRows(players, prevMap){
   const tbody = document.getElementById('tbody');
-  if(!tbody) return;
   tbody.innerHTML = '';
-
-  if(!players || players.length === 0){
-    tbody.innerHTML = '<tr><td colspan="4">Нет данных</td></tr>';
-    return;
-  }
-
   players.forEach((p, idx)=>{
     const tr = document.createElement('tr');
 
@@ -135,6 +121,7 @@ function renderRows(players, prevMap){
     `;
     tbody.appendChild(tr);
 
+    // анимация роста
     const amountEl = tr.querySelector('.amount');
     if(prev!=null && prev !== cur && cur > prev){
       animateValue(amountEl, prev, cur, 1800);
@@ -144,12 +131,15 @@ function renderRows(players, prevMap){
   });
 }
 
-// ===== обновление =====
+// ======== обновление ========
 async function update(){
   const statusEl = document.getElementById('status');
-  if(statusEl) statusEl.textContent = "⏳ Обновление данных...";
+  if(statusEl){
+    statusEl.textContent = "⏳ Обновление данных...";
+    statusEl.className = "status wait";
+  }
 
-  const url = `${API_BASE}?startTime=${START_TS}&endTime=${END_TS}`;
+  const url = `${API_BASE}?startTime=${startTime}&endTime=${endTime}`;
   try{
     const payload = await fetchWithTimeout(url);
 
@@ -165,7 +155,10 @@ async function update(){
     document.getElementById('lastUpdate').textContent =
       'Последнее обновление: ' + new Date(ts).toLocaleTimeString();
 
-    if(statusEl) statusEl.textContent = "✅ Успешно обновлено в " + new Date(ts).toLocaleTimeString();
+    if(statusEl){
+      statusEl.textContent = "✅ Успешно обновлено в " + new Date(ts).toLocaleTimeString();
+      statusEl.className = "status ok";
+    }
 
     saveCache({ data, ts });
     lastTop = top;
@@ -185,8 +178,6 @@ async function update(){
         document.getElementById('lastUpdate').textContent =
           'Последнее обновление: ' + new Date(cache.ts).toLocaleTimeString();
       }
-      if(statusEl) statusEl.textContent = "❌ Ошибка API, показаны кэшированные данные";
-
       lastTop = top;
     }else{
       document.getElementById('tbody').innerHTML =
@@ -196,15 +187,21 @@ async function update(){
         <div class="top3-card skeleton">Загрузка...</div>
         <div class="top3-card skeleton">Загрузка...</div>
       `;
-      if(statusEl) statusEl.textContent = "❌ Ошибка API, данных нет";
+    }
+
+    if(statusEl){
+      statusEl.textContent = "❌ Ошибка обновления";
+      statusEl.className = "status err";
     }
     REFRESH_MS = 60_000;
   }
+
+  // 🔥 Автоматический повторный запуск
   setTimeout(update, REFRESH_MS);
 }
 
-// ===== старт =====
+// ======== старт ========
 document.addEventListener('DOMContentLoaded', ()=>{
-  startCountdown(RACE_END_MS);
+  startCountdown(raceEnd);   // мс
   update();
 });
