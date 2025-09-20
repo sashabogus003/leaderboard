@@ -172,24 +172,39 @@ tbody tr:hover { transform: scale(1.01) }
   .table td { font-size: 13px; padding: 6px; }
 }
 @media (max-width: 480px) {
-  .wrap { width: 100%; margin: 10px auto; padding: 8px; border-radius: 0; }
+  .wrap { 
+    width: 100%; 
+    margin: 0; 
+    padding: 8px; 
+    border-radius: 0; 
+  }
   .title { font-size: 16px; }
   .countdown-block { font-size: 16px; }
   .last-update { font-size: 11px; }
   .update-note { font-size: 10px; }
-  .table { display: block; overflow-x: auto; white-space: nowrap; max-width: 100%; }
+
+  /* Таблица всегда во всю ширину */
+  .table { 
+    width: 100%; 
+    display: table; 
+    table-layout: fixed;
+    border-radius: 0;
+  }
   .table thead th { font-size: 10px; }
   .table td { font-size: 12px; padding: 5px; }
 
-  /* 📐 Фиксы колонок */
+  /* Колонки */
   .table td.place { width: 40px; }
   .table td.amount,
   .table td.prize {
-    min-width: 90px;
+    width: 90px;
     text-align: right;
   }
   .table td.name {
     text-align: left;
-    min-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 120px; /* можно менять под себя */
   }
 }
