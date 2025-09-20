@@ -107,6 +107,8 @@ function updateCountdown(){
   }
 }
 
+// ✅ вызываем сразу при загрузке, а не через 1 сек
+updateCountdown();
 setInterval(updateCountdown,1000);
 
 const bootCache=loadCache();
