@@ -2,42 +2,38 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Shuffle Leaderboard</title>
-  <meta http-equiv="Cache-Control" content="no-store"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leaderboard</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="wrap">
     <div class="hdr">
-      <div class="title">🏆 Гонка рефералов 🏆</div>
+      <h1 class="title">🏆 Лидерборд</h1>
     </div>
 
-    <!-- Крупный таймер -->
-    <div class="countdown-block">
-      <span id="countdown"></span>
-    </div>
+    <!-- Крупный обратный отсчёт -->
+    <div id="countdown" class="countdown-block"></div>
 
-    <div class="last-update" id="lastUpdate">Последнее обновление: —</div>
+    <!-- Последнее обновление -->
+    <div id="lastUpdate" class="last-update"></div>
+    <div class="update-note">(данные обновляются раз в минуту)</div>
 
-    <!-- ТОП-3 карточки -->
-    <div class="top3" id="top3"></div>
+    <!-- ТОП-3 карточками -->
+    <div id="top3" class="top3"></div>
 
-    <!-- Таблица для мест 4-20 -->
+    <!-- Таблица с 4-20 местами -->
     <table class="table">
       <thead>
         <tr>
-          <th>МЕСТО</th>
-          <th>ИГРОК</th>
-          <th>СТАВКИ ($)</th>
-          <th>ПРИЗ</th>
+          <th>Место</th>
+          <th>Игрок</th>
+          <th>Ставки</th>
+          <th>Приз</th>
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr class="skeleton"><td colspan="4">&nbsp;</td></tr>
-        <tr class="skeleton"><td colspan="4">&nbsp;</td></tr>
-        <tr class="skeleton"><td colspan="4">&nbsp;</td></tr>
-        <tr class="skeleton"><td colspan="4">&nbsp;</td></tr>
-        <tr class="skeleton"><td colspan="4">&nbsp;</td></tr>
+        <tr><td colspan="4">Загрузка данных...</td></tr>
       </tbody>
     </table>
   </div>
