@@ -18,8 +18,9 @@ function renderTop3(players){
   const container = document.getElementById('top3');
   container.innerHTML = '';
   players.forEach((p,i)=>{
+    const extraClass = (i === 2) ? 'top3-place' : `top${i+1}`;
     const card = document.createElement('div');
-    card.className = `top3-card top${i+1}`;
+    card.className = `top3-card ${extraClass}`;
     card.innerHTML = `
       <div class="place">#${i+1}</div>
       <div class="name">${escapeHtml(p.username ?? '—')}</div>
