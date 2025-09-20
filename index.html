@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Leaderboard</title>
+  <title>Гонка рефералов</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="wrap">
     <div class="hdr">
-      <h1 class="title">🏆 Лидерборд</h1>
+      <h1 class="title">🏆 Гонка рефералов 🏆</h1>
     </div>
 
     <!-- Крупный обратный отсчёт -->
@@ -22,7 +22,7 @@
     <!-- ТОП-3 карточками -->
     <div id="top3" class="top3"></div>
 
-    <!-- Таблица -->
+    <!-- Таблица 4–20 -->
     <table class="table">
       <thead>
         <tr>
@@ -38,12 +38,12 @@
     </table>
   </div>
 
-  <!-- Переменные гонки -->
+  <!-- Константы гонки -->
   <script>
-    // ⚡️ поменяй дату окончания на реальную
-    const raceEnd = new Date("2025-09-30T23:59:59Z").getTime();
-    const startTime = 1756072800; // пример
-    const endTime = 1759265999;   // пример
+    // 30.09.2025 23:59:59 МСК == 20:59:59 UTC
+    const raceEnd = 1759265999000; // мс от эпохи
+    const startTime = 1756072800;  // сек (как у тебя)
+    const endTime   = 1759265999;  // сек
   </script>
 
   <script src="script.js"></script>
