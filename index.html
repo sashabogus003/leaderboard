@@ -22,13 +22,13 @@
     <!-- ТОП-3 карточками -->
     <div id="top3" class="top3"></div>
 
-    <!-- Таблица с 4-20 местами -->
+    <!-- Таблица -->
     <table class="table">
       <thead>
         <tr>
           <th>Место</th>
           <th>Игрок</th>
-          <th>Ставки</th>
+          <th>Ставки ($)</th>
           <th>Приз</th>
         </tr>
       </thead>
@@ -37,6 +37,14 @@
       </tbody>
     </table>
   </div>
+
+  <!-- Переменные гонки -->
+  <script>
+    // ⚡️ поменяй дату окончания на реальную
+    const raceEnd = new Date("2025-09-30T23:59:59Z").getTime();
+    const startTime = 1756072800; // пример
+    const endTime = 1759265999;   // пример
+  </script>
 
   <script src="script.js"></script>
 </body>
