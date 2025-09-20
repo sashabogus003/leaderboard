@@ -4,6 +4,7 @@
   --accent: #ffd700;
   --success: #4caf50;
   --error: #f44336;
+  --muted: #aaa;
 }
 
 * { box-sizing: border-box }
@@ -49,17 +50,21 @@ body {
   color: #888;
   margin-bottom: 10px;
 }
+
+/* ✅ Статус автообновления + обратный отсчёт */
 .update-status {
   margin-top: 8px;
   text-align: center;
   font-size: 13px;
 }
-.update-status.ok {
-  color: var(--success);
+.update-status .next-update {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
 }
-.update-status.err {
-  color: var(--error);
-}
+.update-status.ok { color: var(--success); }
+.update-status.err { color: var(--error); }
+.update-status.wait { color: var(--muted); }
 
 @keyframes pulse {
   0%, 100% { transform: scale(1); }
@@ -93,9 +98,7 @@ body {
   font-weight: 700;
   box-shadow: 0 0 12px rgba(0,0,0,0.4);
 }
-.top3-card.animate-in {
-  animation: slideInTop 0.7s ease;
-}
+.top3-card.animate-in { animation: slideInTop 0.7s ease; }
 @keyframes slideInTop {
   0% { transform: translateY(-40px); opacity: 0; }
   70% { transform: translateY(5px); opacity: 1; }
