@@ -3,14 +3,14 @@ const endTime   = 1759265999;
 const API_BASE = "/api/stats";
 const PRIZES = [2000,1500,750,500,400,300,200,125,125,100,0,0,0,0,0,0,0,0,0,0];
 let REFRESH_MS = 60_000;
-const CACHE_KEY = 'shuffle_leaderboard_cache_v3';
+const CACHE_KEY = 'shuffle_leaderboard_cache_v4';
 
 let lastData = null;
 
 const fmtMoney = (n)=> '$' + Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-function loadCache(){ try{const raw=localStorage.getItem(CACHE_KEY);if(!raw)return null;const parsed=JSON.parse(raw);if(!parsed||!Array.isArray(parsed.data))return null;return parsed;}catch(e){return null;} }
-function saveCache(data){ try{localStorage.setItem(CACHE_KEY, JSON.stringify({ts: Date.now(), data}));}catch(e){} }
+function loadCache(){ try{const raw=localStorage.getItem(CACHE_KEY);if(!raw)return null;const parsed=JSON.parse(raw);if(!parsed||!parsed.data)return null;return parsed;}catch(e){return null;} }
+function saveCache(payload){ try{localStorage.setItem(CACHE_KEY, JSON.stringify(payload));}catch(e){} }
 
 function sortTop20(list){ return [...list].sort((a,b)=> (b.wagerAmount||0) - (a.wagerAmount||0)).slice(0,20); }
 
@@ -73,7 +73,7 @@ async function fetchWithTimeout(url, opts={}, timeoutMs=8000){
   const id=setTimeout(()=>ctrl.abort(), timeoutMs);
   try{
     const res=await fetch(url,{...(opts||{}),signal:ctrl.signal});
-    if(!res.ok){let msg=`${res.status} ${res.statusText}`; try{const j=await res.json(); if(j&&j.message)msg=j.message;}catch{} throw new Error(msg);} 
+    if(!res.ok){throw new Error(`${res.status} ${res.statusText}`);} 
     return await res.json();
   } finally{ clearTimeout(id); }
 }
@@ -81,28 +81,34 @@ async function fetchWithTimeout(url, opts={}, timeoutMs=8000){
 async function update(){
   const url=`${API_BASE}?startTime=${startTime}&endTime=${endTime}`;
   try{
-    const data=await fetchWithTimeout(url);
-    if(!Array.isArray(data)) throw new Error('INVALID_RESPONSE');
-    const top=sortTop20(data);
+    const payload=await fetchWithTimeout(url);
+    if(!payload || !Array.isArray(payload.data)) throw new Error('INVALID_RESPONSE');
+
+    const top=sortTop20(payload.data);
     const prevMap = lastData ? Object.fromEntries(lastData.map(x=>[x.username, x.wagerAmount])) : null;
 
     renderTop3(top.slice(0,3));
     renderRows(top.slice(3), prevMap);
 
-    if (!lastData || JSON.stringify(lastData) !== JSON.stringify(top)) {
+    // ✅ теперь время берём с сервера
+    if (payload.ts) {
       document.getElementById("lastUpdate").textContent =
-        "Последнее обновление: " + new Date().toLocaleTimeString();
+        "Последнее обновление: " + new Date(payload.ts).toLocaleTimeString();
     }
 
-    saveCache(top);
+    saveCache(payload);
     lastData = top;
     REFRESH_MS = 60_000;
   }catch(err){
     console.error('Fetch error:',err);
     const cache=loadCache();
-    if(cache&&Array.isArray(cache.data)&&cache.data.length){
+    if(cache&&cache.data){
       renderTop3(cache.data.slice(0,3));
       renderRows(cache.data.slice(3), null);
+      if (cache.ts) {
+        document.getElementById("lastUpdate").textContent =
+          "Последнее обновление: " + new Date(cache.ts).toLocaleTimeString();
+      }
       lastData = cache.data;
     } else {
       const tbody=document.getElementById('tbody');
@@ -137,7 +143,9 @@ if(bootCache&&bootCache.data){
   lastData = bootCache.data; 
   renderTop3(bootCache.data.slice(0,3));
   renderRows(bootCache.data.slice(3), null); 
-  document.getElementById("lastUpdate").textContent =
-    "Последнее обновление: " + new Date().toLocaleTimeString();
+  if (bootCache.ts) {
+    document.getElementById("lastUpdate").textContent =
+      "Последнее обновление: " + new Date(bootCache.ts).toLocaleTimeString();
+  }
 }
 update();
