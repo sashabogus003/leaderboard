@@ -1,5 +1,5 @@
-const startTime = 1756072800; // 25.08.2025 UTC
-const endTime   = 1759265999; // 30.09.2025 23:59:59 MSK (20:59:59 UTC)
+const startTime = 1756072800; 
+const endTime   = 1759265999; 
 const API_BASE = "/api/stats";
 const PRIZES = [2000,1500,750,500,400,300,200,125,125,100,0,0,0,0,0,0,0,0,0,0];
 let REFRESH_MS = 60_000;
@@ -14,6 +14,22 @@ function saveCache(data){ try{localStorage.setItem(CACHE_KEY, JSON.stringify({ts
 
 function sortTop20(list){ return [...list].sort((a,b)=> (b.wagerAmount||0) - (a.wagerAmount||0)).slice(0,20); }
 
+function renderTop3(players){
+  const container = document.getElementById('top3');
+  container.innerHTML = '';
+  players.forEach((p,i)=>{
+    const card = document.createElement('div');
+    card.className = `top3-card top${i+1}`;
+    card.innerHTML = `
+      <div class="place">#${i+1}</div>
+      <div class="name">${escapeHtml(p.username ?? '—')}</div>
+      <div class="amount">${fmtMoney(p.wagerAmount)}</div>
+      <div class="prize">${PRIZES[i] ? fmtMoney(PRIZES[i]) : '-'}</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
 function renderRows(rows, prevMap){
   const tbody=document.getElementById('tbody');
   tbody.innerHTML='';
@@ -23,10 +39,10 @@ function renderRows(rows, prevMap){
     const prev = prevMap && prevMap[u.username] != null ? Number(prevMap[u.username]) : null;
     const cur  = Number(u.wagerAmount||0);
     tr.innerHTML = `
-      <td class="place">${i+1}</td>
+      <td class="place">${i+4}</td>
       <td class="name">${escapeHtml(u.username ?? '—')}</td>
       <td class="amount">${fmtMoney(prev!=null ? prev : cur)}</td>
-      <td class="prize">${PRIZES[i] ? fmtMoney(PRIZES[i]) : '-'}</td>
+      <td class="prize">${PRIZES[i+3] ? fmtMoney(PRIZES[i+3]) : '-'}</td>
     `;
     tbody.appendChild(tr);
     if(prev!=null && prev!==cur){
@@ -69,9 +85,9 @@ async function update(){
     const top=sortTop20(data);
     const prevMap = lastData ? Object.fromEntries(lastData.map(x=>[x.username, x.wagerAmount])) : null;
 
-    renderRows(top, prevMap);
+    renderTop3(top.slice(0,3));
+    renderRows(top.slice(3), prevMap);
 
-    // ✅ обновляем только если данные реально изменились
     if (!lastData || JSON.stringify(lastData) !== JSON.stringify(top)) {
       document.getElementById("lastUpdate").textContent =
         "Последнее обновление: " + new Date().toLocaleTimeString();
@@ -84,13 +100,14 @@ async function update(){
     console.error('Fetch error:',err);
     const cache=loadCache();
     if(cache&&Array.isArray(cache.data)&&cache.data.length){
-      renderRows(cache.data, null);
+      renderTop3(cache.data.slice(0,3));
+      renderRows(cache.data.slice(3), null);
       lastData = cache.data;
     } else {
       const tbody=document.getElementById('tbody');
       tbody.innerHTML='<tr><td colspan="4">Загрузка данных...</td></tr>';
     }
-    REFRESH_MS = 10_000; // при ошибке пробуем чаще (каждые 10 сек)
+    REFRESH_MS = 10_000;
   }
 
   setTimeout(update, REFRESH_MS);
@@ -111,14 +128,14 @@ function updateCountdown(){
   }
 }
 
-// ✅ вызываем сразу при загрузке, а не через 1 сек
 updateCountdown();
 setInterval(updateCountdown,1000);
 
 const bootCache=loadCache();
 if(bootCache&&bootCache.data){ 
   lastData = bootCache.data; 
-  renderRows(bootCache.data, null); 
+  renderTop3(bootCache.data.slice(0,3));
+  renderRows(bootCache.data.slice(3), null); 
   document.getElementById("lastUpdate").textContent =
     "Последнее обновление: " + new Date().toLocaleTimeString();
 }
