@@ -146,6 +146,9 @@ function renderRows(players, prevMap){
 
 // ===== обновление =====
 async function update(){
+  const statusEl = document.getElementById('status');
+  if(statusEl) statusEl.textContent = "⏳ Обновление данных...";
+
   const url = `${API_BASE}?startTime=${START_TS}&endTime=${END_TS}`;
   try{
     const payload = await fetchWithTimeout(url);
@@ -161,6 +164,8 @@ async function update(){
 
     document.getElementById('lastUpdate').textContent =
       'Последнее обновление: ' + new Date(ts).toLocaleTimeString();
+
+    if(statusEl) statusEl.textContent = "✅ Успешно обновлено в " + new Date(ts).toLocaleTimeString();
 
     saveCache({ data, ts });
     lastTop = top;
@@ -180,6 +185,8 @@ async function update(){
         document.getElementById('lastUpdate').textContent =
           'Последнее обновление: ' + new Date(cache.ts).toLocaleTimeString();
       }
+      if(statusEl) statusEl.textContent = "❌ Ошибка API, показаны кэшированные данные";
+
       lastTop = top;
     }else{
       document.getElementById('tbody').innerHTML =
@@ -189,8 +196,9 @@ async function update(){
         <div class="top3-card skeleton">Загрузка...</div>
         <div class="top3-card skeleton">Загрузка...</div>
       `;
+      if(statusEl) statusEl.textContent = "❌ Ошибка API, данных нет";
     }
-    REFRESH_MS = 10_000;
+    REFRESH_MS = 60_000;
   }
   setTimeout(update, REFRESH_MS);
 }
