@@ -1,18 +1,15 @@
 const API_BASE = "/api/stats";
-
-// ===== Константы =====
-const START_TS = 1756072800;   // старт (в секундах)
-const END_TS   = 1759265999;   // конец (30.09.2025 23:59:59 МСК = 20:59:59 UTC)
+const START_TS = 1756072800;   // начало гонки (сек)
+const END_TS   = 1759265999;   // конец гонки (сек)
 const RACE_END_MS = END_TS * 1000;
 
-// Призы на места 1-20
 const PRIZES = [2000,1500,750,500,400,300,200,125,125,100,0,0,0,0,0,0,0,0,0,0];
 
-let lastTop = null;          
+let lastTop = null;
 let REFRESH_MS = 60_000;
 let isFirstRender = true;
 
-// ======== таймер ========
+// ===== таймер =====
 function startCountdown(endTimeMs){
   function tick(){
     const now = Date.now();
@@ -30,7 +27,7 @@ function startCountdown(endTimeMs){
   setInterval(tick, 1000);
 }
 
-// ======== утилиты ========
+// ===== утилиты =====
 async function fetchWithTimeout(url, opts={}, timeout=10000){
   const ctrl = new AbortController();
   const id = setTimeout(()=>ctrl.abort(), timeout);
@@ -52,10 +49,10 @@ function fmtMoney(n){
 function saveCache(payload){ try{localStorage.setItem('leaderboardCache', JSON.stringify(payload));}catch{} }
 function loadCache(){ try{const raw = localStorage.getItem('leaderboardCache'); return raw? JSON.parse(raw): null;}catch{return null;} }
 
-// ======== анимация ========
+// ===== анимация =====
 function animateValue(el, from, to, durationMs=1500){
   if(from === to){ el.textContent = fmtMoney(to); return; }
-  el.classList.add('flash-up');                   
+  el.classList.add('flash-up');
   const start = performance.now();
   const delta = to - from;
   function ease(t){ return t<.5 ? 2*t*t : -1+(4-2*t)*t; }
@@ -66,13 +63,13 @@ function animateValue(el, from, to, durationMs=1500){
     if(t < 1){ requestAnimationFrame(frame); }
     else{
       el.textContent = fmtMoney(to);
-      el.classList.remove('flash-up');            
+      el.classList.remove('flash-up');
     }
   }
   requestAnimationFrame(frame);
 }
 
-// ======== рендер ========
+// ===== рендер =====
 function renderTop3(players, prevMap){
   const box = document.getElementById('top3');
   if(!box) return;
@@ -147,31 +144,25 @@ function renderRows(players, prevMap){
   });
 }
 
-// ======== обновление ========
+// ===== обновление =====
 async function update(){
   const url = `${API_BASE}?startTime=${START_TS}&endTime=${END_TS}`;
   try{
     const payload = await fetchWithTimeout(url);
 
-    // API возвращает сразу массив игроков
-    const data = Array.isArray(payload) ? payload : [];
-    if(!Array.isArray(data)) throw new Error('INVALID_RESPONSE');
+    const data = payload.data || [];
+    const ts   = payload.ts || Date.now();
 
     const top = sortTop20(data);
-
-    const prevMap = lastTop
-      ? new Map(lastTop.map(x => [x.username, x.wagerAmount]))
-      : null;
+    const prevMap = lastTop ? new Map(lastTop.map(x => [x.username, x.wagerAmount])) : null;
 
     renderTop3(top.slice(0,3), prevMap);
     renderRows(top.slice(3), prevMap);
 
-    if(payload.ts){
-      const el = document.getElementById('lastUpdate');
-      if(el) el.textContent = 'Последнее обновление: ' + new Date(payload.ts).toLocaleTimeString();
-    }
+    document.getElementById('lastUpdate').textContent =
+      'Последнее обновление: ' + new Date(ts).toLocaleTimeString();
 
-    saveCache({ data, ts: payload.ts });
+    saveCache({ data, ts });
     lastTop = top;
     REFRESH_MS = 60_000;
 
@@ -180,38 +171,31 @@ async function update(){
     const cache = loadCache();
     if(cache && Array.isArray(cache.data)){
       const top = sortTop20(cache.data);
-      const prevMap = lastTop
-        ? new Map(lastTop.map(x => [x.username, x.wagerAmount]))
-        : null;
+      const prevMap = lastTop ? new Map(lastTop.map(x => [x.username, x.wagerAmount])) : null;
 
       renderTop3(top.slice(0,3), prevMap);
       renderRows(top.slice(3), prevMap);
 
       if(cache.ts){
-        const el = document.getElementById('lastUpdate');
-        if(el) el.textContent = 'Последнее обновление: ' + new Date(cache.ts).toLocaleTimeString();
+        document.getElementById('lastUpdate').textContent =
+          'Последнее обновление: ' + new Date(cache.ts).toLocaleTimeString();
       }
       lastTop = top;
     }else{
-      const tbody = document.getElementById('tbody');
-      if(tbody){
-        tbody.innerHTML = '<tr><td colspan="4">Загрузка данных...</td></tr>';
-      }
-      const top3 = document.getElementById('top3');
-      if(top3){
-        top3.innerHTML = `
-          <div class="top3-card skeleton">Загрузка...</div>
-          <div class="top3-card skeleton">Загрузка...</div>
-          <div class="top3-card skeleton">Загрузка...</div>
-        `;
-      }
+      document.getElementById('tbody').innerHTML =
+        '<tr><td colspan="4">Загрузка данных...</td></tr>';
+      document.getElementById('top3').innerHTML = `
+        <div class="top3-card skeleton">Загрузка...</div>
+        <div class="top3-card skeleton">Загрузка...</div>
+        <div class="top3-card skeleton">Загрузка...</div>
+      `;
     }
     REFRESH_MS = 10_000;
   }
   setTimeout(update, REFRESH_MS);
 }
 
-// ======== старт ========
+// ===== старт =====
 document.addEventListener('DOMContentLoaded', ()=>{
   startCountdown(RACE_END_MS);
   update();
