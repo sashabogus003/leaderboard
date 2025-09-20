@@ -36,7 +36,7 @@ function renderRows(rows, prevMap){
   });
 }
 
-function escapeHtml(str){return String(str).replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;','\'':'&#39;'}[s]));}
+function escapeHtml(str){return String(str).replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));}
 
 function animateValue(el, from, to, durationMs){
   const start = performance.now();
@@ -80,9 +80,9 @@ async function update(){
       lastData = cache.data;
     } else {
       const tbody=document.getElementById('tbody');
-      tbody.innerHTML='<tr><td colspan="4">Ошибка и нет кэша</td></tr>';
+      tbody.innerHTML='<tr><td colspan="4">Загрузка данных...</td></tr>';
     }
-    REFRESH_MS = 30_000; // при ошибке пробуем чаще
+    REFRESH_MS = 10_000; // при ошибке пробуем чаще (каждые 10 сек)
   }
 
   // ✅ всегда обновляем надпись
