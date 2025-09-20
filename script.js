@@ -1,16 +1,14 @@
 const API_BASE = "/api/stats";
 
-// ===== Константы и фолбэки (чтобы не падать, если что-то не задано в index.html) =====
-const DEFAULT_START = 1756072800;  // сек
-const DEFAULT_END   = 1759265999;  // сек (30.09.2025 23:59:59 МСК = 20:59:59 UTC)
-const START_TS = (typeof startTime !== "undefined") ? startTime : DEFAULT_START;
-const END_TS   = (typeof endTime   !== "undefined") ? endTime   : DEFAULT_END;
-const RACE_END_MS = (typeof raceEnd !== "undefined") ? raceEnd : (END_TS * 1000);
+// ===== Константы =====
+const START_TS = 1756072800;   // старт (в секундах)
+const END_TS   = 1759265999;   // конец (30.09.2025 23:59:59 МСК = 20:59:59 UTC)
+const RACE_END_MS = END_TS * 1000;
 
 // Призы на места 1-20
 const PRIZES = [2000,1500,750,500,400,300,200,125,125,100,0,0,0,0,0,0,0,0,0,0];
 
-let lastTop = null;          // предыдущие топ-20 для сравнения
+let lastTop = null;          
 let REFRESH_MS = 60_000;
 let isFirstRender = true;
 
@@ -43,14 +41,6 @@ async function fetchWithTimeout(url, opts={}, timeout=10000){
   } finally { clearTimeout(id); }
 }
 
-// нормализация полей (на случай, если у Shuffle имена ключей чуть другие)
-function normalizePlayers(list){
-  return (Array.isArray(list) ? list : []).map(p => ({
-    username: (p.username ?? p.name ?? p.user ?? "—"),
-    wagerAmount: Number(p.wagerAmount ?? p.wager ?? p.wagered ?? 0)
-  }));
-}
-
 function sortTop20(list){
   return [...list].sort((a,b)=> (b.wagerAmount||0) - (a.wagerAmount||0)).slice(0,20);
 }
@@ -62,13 +52,13 @@ function fmtMoney(n){
 function saveCache(payload){ try{localStorage.setItem('leaderboardCache', JSON.stringify(payload));}catch{} }
 function loadCache(){ try{const raw = localStorage.getItem('leaderboardCache'); return raw? JSON.parse(raw): null;}catch{return null;} }
 
-// ======== анимация роста значения ========
+// ======== анимация ========
 function animateValue(el, from, to, durationMs=1500){
   if(from === to){ el.textContent = fmtMoney(to); return; }
-  el.classList.add('flash-up');                   // зелёная подсветка на время анимации
+  el.classList.add('flash-up');                   
   const start = performance.now();
   const delta = to - from;
-  function ease(t){ return t<.5 ? 2*t*t : -1+(4-2*t)*t; } // easeInOutQuad
+  function ease(t){ return t<.5 ? 2*t*t : -1+(4-2*t)*t; }
   function frame(now){
     const t = Math.min(1, (now - start)/durationMs);
     const v = from + delta * ease(t);
@@ -76,7 +66,7 @@ function animateValue(el, from, to, durationMs=1500){
     if(t < 1){ requestAnimationFrame(frame); }
     else{
       el.textContent = fmtMoney(to);
-      el.classList.remove('flash-up');            // вернуть обычный цвет
+      el.classList.remove('flash-up');            
     }
   }
   requestAnimationFrame(frame);
@@ -113,7 +103,6 @@ function renderTop3(players, prevMap){
     `;
     box.appendChild(card);
 
-    // анимация суммы, если выросла
     const amountEl = card.querySelector('.amount');
     if(prev!=null && prev !== cur && cur > prev){
       animateValue(amountEl, prev, cur, 1800);
@@ -149,7 +138,6 @@ function renderRows(players, prevMap){
     `;
     tbody.appendChild(tr);
 
-    // анимация роста
     const amountEl = tr.querySelector('.amount');
     if(prev!=null && prev !== cur && cur > prev){
       animateValue(amountEl, prev, cur, 1800);
@@ -165,19 +153,12 @@ async function update(){
   try{
     const payload = await fetchWithTimeout(url);
 
-    // найдём массив игроков при любом оформлении
-    // поддерживаем: [ ... ] ИЛИ { data:[ ... ] } ИЛИ { data:{ players:[ ... ] } }
-    const raw = Array.isArray(payload) ? payload : payload?.data;
-    const list = Array.isArray(raw) ? raw : (raw && raw.players) ? raw.players : [];
-    if(!Array.isArray(list)) throw new Error('INVALID_RESPONSE_SHAPE');
+    // API возвращает сразу массив игроков
+    const data = Array.isArray(payload) ? payload : [];
+    if(!Array.isArray(data)) throw new Error('INVALID_RESPONSE');
 
-    // нормализуем поля
-    const data = normalizePlayers(list);
-
-    // top-20
     const top = sortTop20(data);
 
-    // карта предыдущих значений для анимации
     const prevMap = lastTop
       ? new Map(lastTop.map(x => [x.username, x.wagerAmount]))
       : null;
@@ -185,27 +166,20 @@ async function update(){
     renderTop3(top.slice(0,3), prevMap);
     renderRows(top.slice(3), prevMap);
 
-    // время последнего обновления (если сервер прислал)
-    const ts = Array.isArray(payload) ? null : payload?.ts ?? null;
-    if(ts){
+    if(payload.ts){
       const el = document.getElementById('lastUpdate');
-      if(el) el.textContent = 'Последнее обновление: ' + new Date(ts).toLocaleTimeString();
+      if(el) el.textContent = 'Последнее обновление: ' + new Date(payload.ts).toLocaleTimeString();
     }
 
-    // кешируем ровно список игроков (нормализованный), чтобы фронт всегда понимал формат
-    saveCache({ data, ts });
+    saveCache({ data, ts: payload.ts });
     lastTop = top;
     REFRESH_MS = 60_000;
 
-    // полезные логи для дебага
-    console.log('[LB] OK, players:', data.length);
   }catch(err){
-    console.error('[LB] Fetch error:', err);
-
+    console.error('Fetch error:', err);
     const cache = loadCache();
     if(cache && Array.isArray(cache.data)){
-      const data = cache.data;
-      const top = sortTop20(data);
+      const top = sortTop20(cache.data);
       const prevMap = lastTop
         ? new Map(lastTop.map(x => [x.username, x.wagerAmount]))
         : null;
@@ -218,7 +192,6 @@ async function update(){
         if(el) el.textContent = 'Последнее обновление: ' + new Date(cache.ts).toLocaleTimeString();
       }
       lastTop = top;
-      console.log('[LB] Used cached data:', data.length);
     }else{
       const tbody = document.getElementById('tbody');
       if(tbody){
@@ -240,6 +213,6 @@ async function update(){
 
 // ======== старт ========
 document.addEventListener('DOMContentLoaded', ()=>{
-  startCountdown(RACE_END_MS);   // мс
+  startCountdown(RACE_END_MS);
   update();
 });
