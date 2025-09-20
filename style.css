@@ -78,6 +78,9 @@ body{
   text-align: center;
   font-weight: 700;
   box-shadow: 0 0 12px rgba(0,0,0,0.4);
+}
+
+.top3-card.animate-in {
   animation: slideInTop 0.7s ease;
 }
 
