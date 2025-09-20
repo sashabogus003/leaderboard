@@ -1,35 +1,47 @@
-let cache = { ts: 0, data: null };
+import fetch from 'node-fetch';
+
+let cache = {
+  data: null,
+  ts: null,        // время последнего обновления кэша
+  expiry: 0
+};
 
 export default async function handler(req, res) {
   const { startTime, endTime } = req.query;
-  const now = Date.now();
 
-  // если кэш свежее минуты → отдаём его
-  if (cache.data && (now - cache.ts < 60_000)) {
-    return res.status(200).json(cache.data);
+  // если есть кэш и он ещё живой → отдаем его
+  if (cache.data && Date.now() < cache.expiry) {
+    return res.status(200).json({ data: cache.data, ts: cache.ts });
   }
 
-  const url = `https://affiliate.shuffle.com/stats/${process.env.SHUFFLE_KEY}?startTime=${startTime}&endTime=${endTime}`;
-
   try {
-    const r = await fetch(url);
-    if (!r.ok) {
-      throw new Error(`Ошибка ${r.status}`);
+    const url = `https://api.shuffle.com/stats?startTime=${startTime}&endTime=${endTime}`;
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${process.env.SHUFFLE_KEY}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Ошибка API: ${response.status}`);
     }
-    const data = await r.json();
 
-    // сохраняем данные в кэш
-    cache = { ts: now, data };
+    const json = await response.json();
 
-    res.status(200).json(data);
+    // сохраняем в кэш
+    cache.data = json;
+    cache.ts = Date.now();               // метка времени обновления
+    cache.expiry = Date.now() + 60 * 1000; // живёт 1 минуту
+
+    return res.status(200).json({ data: cache.data, ts: cache.ts });
   } catch (err) {
-    console.error("API error:", err);
+    console.error("Ошибка при запросе Shuffle:", err.message);
 
-    // если в кэше что-то есть — отдаём его даже при ошибке
     if (cache.data) {
-      return res.status(200).json(cache.data);
+      // отдаём старый кэш, даже если API упало
+      return res.status(200).json({ data: cache.data, ts: cache.ts });
     }
 
-    res.status(500).json({ error: "Ошибка запроса и нет кэша" });
+    return res.status(500).json({ message: "Ошибка запроса и нет кэша" });
   }
 }
