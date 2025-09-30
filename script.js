@@ -1,7 +1,7 @@
 const API_BASE = "/api/stats";
 const REFRESH_MS = 60_000;
 
-// ЛОКАЛЬНЫЕ переменные (без ошибок и undefined)
+// ЛОКАЛЬНЫЕ переменные (без конфликтов с index.html)
 let API_START = 0;          // сек
 let API_END   = 0;          // сек
 let COUNTDOWN_END_MS = 0;
@@ -242,6 +242,7 @@ function applyRaceLocal(race){
   COUNTDOWN_END_MS = (API_END||0) * 1000;
   startCountdown(COUNTDOWN_END_MS);
 
+  // сброс кэша и мгновенное обновление
   lastTop = null;
   localStorage.removeItem('leaderboardCache');
   localStorage.removeItem('lastTop');
