@@ -1,7 +1,12 @@
 const API_BASE = "/api/stats";
 const REFRESH_MS = 60_000;
 
-let lastTop = null;          // предыдущие топ-20 для сравнения
+// ЛОКАЛЬНЫЕ переменные (не трогаем твои const из index.html)
+let API_START = typeof startTime === 'number' ? startTime : 0;          // сек
+let API_END   = typeof endTime   === 'number' ? endTime   : 0;          // сек
+let COUNTDOWN_END_MS = typeof raceEnd === 'number' ? raceEnd : (API_END * 1000);
+
+let lastTop = null;
 let isFirstRender = true;
 let nextUpdateTimer = null;
 let countdown = REFRESH_MS / 1000;
@@ -44,7 +49,7 @@ function loadCache(){ try{const raw = localStorage.getItem('leaderboardCache'); 
 function saveLastTop(top){ try{ localStorage.setItem('lastTop', JSON.stringify(top)); }catch{} }
 function loadLastTop(){ try{ const raw = localStorage.getItem('lastTop'); return raw ? JSON.parse(raw) : null; }catch{return null;} }
 
-// ===== статус и обратный отсчёт =====
+// ===== статус / обратный отсчёт обновления =====
 function setStatus(type, text){
   const box = document.getElementById('updateStatus');
   if(!box) return;
@@ -66,7 +71,7 @@ function startUpdateCountdown(){
   }, 1000);
 }
 
-// ===== анимация роста значения =====
+// ===== анимация роста =====
 function animateValue(el, from, to, durationMs=1800){
   if(from === to){ el.textContent = fmtMoney(to); return; }
   el.classList.add('flash-up');
@@ -110,7 +115,7 @@ function renderTop3(players, prevMap){
       <div class="place">#${i+1}</div>
       <div class="name">${p.username ?? '—'}</div>
       <div class="amount">${fmtMoney(prev!=null ? prev : cur)}</div>
-      <div class="prize">${PRIZES[i] ? fmtMoney(PRIZES[i]) : ""}</div>
+      <div class="prize">${typeof PRIZES !== 'undefined' && PRIZES[i] ? fmtMoney(PRIZES[i]) : ""}</div>
     `;
     box.appendChild(card);
 
@@ -133,7 +138,7 @@ function renderRows(players, prevMap){
       <td class="place">${idx+4}</td>
       <td class="name">${p.username ?? '—'}</td>
       <td class="amount">${fmtMoney(prev!=null ? prev : cur)}</td>
-      <td class="prize">${PRIZES[idx+3] ? fmtMoney(PRIZES[idx+3]) : '-'}</td>
+      <td class="prize">${typeof PRIZES !== 'undefined' && PRIZES[idx+3] ? fmtMoney(PRIZES[idx+3]) : '-'}</td>
     `;
     tbody.appendChild(tr);
 
@@ -142,10 +147,10 @@ function renderRows(players, prevMap){
   });
 }
 
-// ===== обновление =====
+// ===== обновление (используем локальные API_START/API_END) =====
 async function update(){
   setStatus('wait', '⏳ Обновление данных...');
-  const url = `${API_BASE}?startTime=${startTime}&endTime=${endTime}`;
+  const url = `${API_BASE}?startTime=${API_START}&endTime=${API_END}`;
   try{
     const payload = await fetchWithTimeout(url);
     const data = Array.isArray(payload) ? payload : payload.data;
@@ -179,8 +184,10 @@ async function update(){
       if(lu && cache.ts) lu.textContent = 'Последнее обновление: ' + new Date(cache.ts).toLocaleTimeString();
       lastTop = top;
     }else{
-      document.getElementById('tbody').innerHTML = '<tr><td colspan="4">Загрузка данных...</td></tr>';
-      document.getElementById('top3').innerHTML = `
+      const tbody = document.getElementById('tbody');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4">Загрузка данных...</td></tr>';
+      const top3 = document.getElementById('top3');
+      if (top3) top3.innerHTML = `
         <div class="top3-card skeleton">Загрузка...</div>
         <div class="top3-card skeleton">Загрузка...</div>
         <div class="top3-card skeleton">Загрузка...</div>`;
@@ -190,55 +197,70 @@ async function update(){
   }
 }
 
-// ===== выбор гонки через races.json =====
-async function setupRaceSelector(){
+// ===== races.json (если есть селект) =====
+async function setupRaceSelectorIfAny(){
   const select = document.getElementById('raceSelect');
-  const res = await fetch('races.json', { cache: 'no-store' });
-  if(!res.ok) throw new Error('HTTP '+res.status);
-  const data = await res.json();
-  if(!Array.isArray(data) || data.length === 0) throw new Error('Пустой races.json');
+  if(!select) return false; // селекта нет — работаем по константам index.html
 
-  data.sort((a,b)=> (a.end||0) - (b.end||0));
+  try{
+    const res = await fetch('races.json', { cache: 'no-store' });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    if(!Array.isArray(data) || data.length === 0) throw new Error('Пустой races.json');
 
-  if (select) {
+    // сортируем по окончанию
+    data.sort((a,b)=> (a.end||0) - (b.end||0));
+
+    // рисуем options
     select.innerHTML = data.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-  }
 
-  const nowSec = Math.floor(Date.now()/1000);
+    const nowSec = Math.floor(Date.now()/1000);
+    // ищем активную гонку
+    let current = data.find(r => (r.start <= nowSec && nowSec <= r.end));
+    // если активной нет — берём последнюю
+    if(!current) current = data[data.length-1];
 
-  let current = data.find(r => (r.start <= nowSec && nowSec <= r.end)) || data[data.length-1];
-
-  applyRace(current);
-
-  if (select) {
+    // применяем
+    applyRaceLocal(current);
     select.value = current.id;
+
+    // обработчик выбора
     select.addEventListener('change', (e)=>{
       const chosen = data.find(r => r.id === e.target.value);
       if (!chosen) return;
-      applyRace(chosen);
+      applyRaceLocal(chosen);
     });
+
+    return true;
+  }catch(err){
+    console.warn('races.json недоступен или ошибка парсинга:', err);
+    return false;
   }
 }
 
-function applyRace(race){
+// применяем гонку к локальным переменным и таймеру
+function applyRaceLocal(race){
   if (race) {
-    startTime = race.start;
-    endTime   = race.end;
+    API_START = Number(race.start)||0;
+    API_END   = Number(race.end)||0;
   }
-  raceEnd = endTime * 1000;
-  startCountdown(raceEnd);
+  COUNTDOWN_END_MS = (API_END||0) * 1000;
+  startCountdown(COUNTDOWN_END_MS);
   update();
 }
 
 // ===== старт =====
 document.addEventListener('DOMContentLoaded', async ()=>{
   lastTop = loadLastTop();
-  try {
-    await setupRaceSelector();
-  } catch (e) {
-    console.warn('Не удалось инициализировать селектор гонок:', e);
-    startCountdown(raceEnd);
+
+  const hadSelector = await setupRaceSelectorIfAny();
+
+  if (!hadSelector){
+    // нет селекта или races.json — используем константы из index.html
+    COUNTDOWN_END_MS = typeof raceEnd === 'number' ? raceEnd : (API_END * 1000);
+    startCountdown(COUNTDOWN_END_MS);
     update();
   }
+
   setInterval(update, REFRESH_MS);
 });
