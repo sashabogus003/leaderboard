@@ -206,6 +206,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
 
 // ===== выбор гонки через races.json =====
+
 async function setupRaceSelector(){
   const select = document.getElementById('raceSelect');
   const res = await fetch('races.json', { cache: 'no-store' });
@@ -213,16 +214,19 @@ async function setupRaceSelector(){
   const data = await res.json();
   if(!Array.isArray(data) || data.length === 0) throw new Error('Пустой races.json');
 
-  // сортируем по окончанию, чтобы последняя была актуальной
+  // сортировка по окончанию
   data.sort((a,b)=> (a.end||0) - (b.end||0));
 
-  // отрисуем options
+  // options
   if (select) {
     select.innerHTML = data.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
   }
 
-  // выберем последнюю гонку по умолчанию
-  const current = data[data.length - 1];
+  const nowSec = Math.floor(Date.now()/1000);
+
+  // текущая активная гонка (start <= now <= end), иначе последняя
+  let current = data.find(r => (r.start||0) <= nowSec && nowSec <= (r.end||0)) || data[data.length-1];
+
   applyRace(current);
 
   if (select) {
