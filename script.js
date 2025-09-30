@@ -41,7 +41,6 @@ function fmtMoney(n){ return '$' + Number(n||0).toLocaleString(undefined,{minimu
 function saveCache(payload){ try{localStorage.setItem('leaderboardCache', JSON.stringify(payload));}catch{} }
 function loadCache(){ try{const raw = localStorage.getItem('leaderboardCache'); return raw? JSON.parse(raw): null;}catch{return null;} }
 
-// ===== сохраняем/читаем прошлый TOP для анимации после F5 =====
 function saveLastTop(top){ try{ localStorage.setItem('lastTop', JSON.stringify(top)); }catch{} }
 function loadLastTop(){ try{ const raw = localStorage.getItem('lastTop'); return raw ? JSON.parse(raw) : null; }catch{return null;} }
 
@@ -191,22 +190,7 @@ async function update(){
   }
 }
 
-// ===== старт =====
-document.addEventListener('DOMContentLoaded', async ()=>{
-  lastTop = loadLastTop();
-  try {
-    await setupRaceSelector(); // загрузить races.json, выбрать актуальную гонку
-  } catch (e) {
-    console.warn('Не удалось инициализировать селектор гонок:', e);
-    startCountdown(raceEnd);
-    update();
-  }
-  setInterval(update, REFRESH_MS); // автообновление каждую минуту
-});
-
-
 // ===== выбор гонки через races.json =====
-
 async function setupRaceSelector(){
   const select = document.getElementById('raceSelect');
   const res = await fetch('races.json', { cache: 'no-store' });
@@ -214,18 +198,15 @@ async function setupRaceSelector(){
   const data = await res.json();
   if(!Array.isArray(data) || data.length === 0) throw new Error('Пустой races.json');
 
-  // сортировка по окончанию
   data.sort((a,b)=> (a.end||0) - (b.end||0));
 
-  // options
   if (select) {
     select.innerHTML = data.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
   }
 
   const nowSec = Math.floor(Date.now()/1000);
 
-  // текущая активная гонка (start <= now <= end), иначе последняя
-  let current = data.find(r => (r.start||0) <= nowSec && nowSec <= (r.end||0)) || data[data.length-1];
+  let current = data.find(r => (r.start <= nowSec && nowSec <= r.end)) || data[data.length-1];
 
   applyRace(current);
 
@@ -241,11 +222,23 @@ async function setupRaceSelector(){
 
 function applyRace(race){
   if (race) {
-    // обновляем глобальные переменные, которые использует update()
     startTime = race.start;
     endTime   = race.end;
   }
-  raceEnd = endTime * 1000; // мс
+  raceEnd = endTime * 1000;
   startCountdown(raceEnd);
   update();
 }
+
+// ===== старт =====
+document.addEventListener('DOMContentLoaded', async ()=>{
+  lastTop = loadLastTop();
+  try {
+    await setupRaceSelector();
+  } catch (e) {
+    console.warn('Не удалось инициализировать селектор гонок:', e);
+    startCountdown(raceEnd);
+    update();
+  }
+  setInterval(update, REFRESH_MS);
+});
