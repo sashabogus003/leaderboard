@@ -14,10 +14,11 @@
 
     <!-- Крупный обратный отсчёт -->
     <div id="countdown" class="countdown-block"></div>
-<div class="race-controls">
-  <label for="raceSelect">Гонка:</label>
-  <select id="raceSelect"></select>
-</div>
+    
+    <div class="race-controls">
+      <label for="raceSelect">Гонка:</label>
+      <select id="raceSelect"></select>
+    </div>
 
     <!-- Последнее обновление -->
     <div id="lastUpdate" class="last-update"></div>
@@ -48,15 +49,14 @@
     </div>
   </div>
 
-  <!-- Константы гонки -->
+  <!-- Константы гонки (дефолтные, если нет races.json) -->
   <script>
-    // 30.09.2025 23:59:59 МСК == 20:59:59 UTC
-    let raceEnd = endTime * 1000; // миллисекунды для таймера
-    let startTime = 1759266001;  // сек
-    let endTime   = 1761944399;  // сек
-    const PRIZES = [
-      2000, 1500, 750, 500, 400, 300, 200, 125, 125, 100
-    ];
+    // 01.10.2025 00:00:01 МСК → 30.09.2025 21:00:01 UTC
+    // 31.10.2025 23:59:59 МСК → 31.10.2025 20:59:59 UTC
+    window.startTime = 1759266001; // сек
+    window.endTime   = 1761944399; // сек
+    window.raceEnd   = window.endTime * 1000; // миллисекунды
+    window.PRIZES = [2000, 1500, 750, 500, 400, 300, 200, 125, 125, 100];
   </script>
 
   <script src="script.js"></script>
