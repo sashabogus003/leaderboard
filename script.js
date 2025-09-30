@@ -21,7 +21,8 @@ function startCountdown(endTimeMs){
     el.textContent = `До конца гонки: ${d}д ${h}ч ${m}м ${s}с`;
   }
   tick();
-  setInterval(tick, 1000);
+  if (window.__raceCountdown) clearInterval(window.__raceCountdown);
+  window.__raceCountdown = setInterval(tick, 1000);
 }
 
 // ===== утилиты =====
@@ -191,9 +192,56 @@ async function update(){
 }
 
 // ===== старт =====
-document.addEventListener('DOMContentLoaded', ()=>{
-  startCountdown(raceEnd);      // таймер гонки
-  lastTop = loadLastTop();      // подхватываем старые данные для анимации после F5
-  update();                     // первый запрос сразу
+document.addEventListener('DOMContentLoaded', async ()=>{
+  lastTop = loadLastTop();
+  try {
+    await setupRaceSelector(); // загрузить races.json, выбрать актуальную гонку
+  } catch (e) {
+    console.warn('Не удалось инициализировать селектор гонок:', e);
+    startCountdown(raceEnd);
+    update();
+  }
   setInterval(update, REFRESH_MS); // автообновление каждую минуту
 });
+
+
+// ===== выбор гонки через races.json =====
+async function setupRaceSelector(){
+  const select = document.getElementById('raceSelect');
+  const res = await fetch('races.json', { cache: 'no-store' });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const data = await res.json();
+  if(!Array.isArray(data) || data.length === 0) throw new Error('Пустой races.json');
+
+  // сортируем по окончанию, чтобы последняя была актуальной
+  data.sort((a,b)=> (a.end||0) - (b.end||0));
+
+  // отрисуем options
+  if (select) {
+    select.innerHTML = data.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+  }
+
+  // выберем последнюю гонку по умолчанию
+  const current = data[data.length - 1];
+  applyRace(current);
+
+  if (select) {
+    select.value = current.id;
+    select.addEventListener('change', (e)=>{
+      const chosen = data.find(r => r.id === e.target.value);
+      if (!chosen) return;
+      applyRace(chosen);
+    });
+  }
+}
+
+function applyRace(race){
+  if (race) {
+    // обновляем глобальные переменные, которые использует update()
+    startTime = race.start;
+    endTime   = race.end;
+  }
+  raceEnd = endTime * 1000; // мс
+  startCountdown(raceEnd);
+  update();
+}
